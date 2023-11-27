@@ -4,18 +4,21 @@ borders = "outset" # Alternatives are "none" and "simple"
 # Base colors are red, green, blue, cyan, magenta, yellow, white and black.
 [colors]
 
-	background = "#2E3440"
+	background = "#0f0f0f"
 
 	# If the terminal doesn't support custom color (like the linux TTY),
 	# non-base colors will be skipped.
 	shadow     = "#3B4252"
-	view       = "111"
+	view       = "#0f0f0f"
 
 	# An array with a single value has the same effect as a simple value.
-	primary   = "#5e81ac"
-	secondary = "#81a1c1"
-    tertiary  = "#88c0d0"
+	primary   = "#ebedf5"
+	secondary = "#cc3939"
 
+    # Borders, etc.
+    tertiary  = "#ebedf5"
+
+    # The color of the title text.
 	title_primary   = "#ffaa00"
 	title_secondary = "#ffff55"
 

@@ -13,7 +13,6 @@ pub fn create_main_window() -> CursiveRunnable {
         .unwrap();
 
     main_window.add_layer(create_chat_layout());
-
     main_window.add_global_callback(Event::Ctrl(Key::Enter), submit_input);
 
     return main_window;
