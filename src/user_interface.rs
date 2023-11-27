@@ -1,16 +1,15 @@
-use crate::ai::fetch_completion;
+use crate::ai::{fetch_completion, HISTORY};
 
 use cursive::{
-    view::{Nameable, Resizable},
+    view::{Nameable, Resizable, Scrollable},
     views::{Dialog, DummyView, LinearLayout, NamedView, TextArea, TextView},
-    Cursive, CursiveRunnable,
+    Cursive, CursiveRunnable, event::{Event, Key},
 };
+use openai_api_rs::v1::chat_completion::ChatCompletionMessage;
 
 /// Create a chat history view
 fn create_chat_history() -> NamedView<LinearLayout> {
     let mut chat_history = LinearLayout::vertical();
-
-    chat_history.add_child(TextView::new("Hello, World!"));
 
     chat_history.with_name("chat_history")
 }
@@ -62,10 +61,28 @@ fn submit_input(window: &mut Cursive) -> () {
         Some(text) => text.to_owned(),
         None => String::from("Error! Could not get completion text"),
     };
-    
 
     window.call_on_name("chat_history", |view: &mut LinearLayout| {
-        view.add_child(TextView::new(completion_text));
+        view.clear();
+
+        for message in HISTORY.lock().unwrap().iter() {
+            let message_text: String = format!("{:?}: {}", message.role, message.content);
+            view.add_child(TextView::new(" "));
+            view.add_child(TextView::new(message_text));
+        }
+        // blank line for spacing
+        view.add_child(TextView::new(" "));
+        view.add_child(TextView::new(format!(
+            "{:?}: {}",
+            first_completion.message.role, completion_text
+        )));
+    });
+
+    HISTORY.lock().unwrap().push(ChatCompletionMessage {
+        role: first_completion.message.role.clone(),
+        content: completion_text,
+        name: None,
+        function_call: None,
     });
 }
 
@@ -78,7 +95,7 @@ pub fn create_main_window() -> CursiveRunnable {
 
     let mut vertical_chat = LinearLayout::vertical();
 
-    vertical_chat.add_child(create_chat_layout());
+    vertical_chat.add_child(create_chat_layout().scrollable());
 
     main_window.add_layer(
         Dialog::around(vertical_chat)
@@ -86,6 +103,8 @@ pub fn create_main_window() -> CursiveRunnable {
             .button("Submit", submit_input)
             .button("Quit", |_window| _window.quit()),
     );
+
+    main_window.add_global_callback(Event::Ctrl(Key::Enter), submit_input);
 
     return main_window;
 }

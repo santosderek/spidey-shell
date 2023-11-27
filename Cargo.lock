@@ -502,6 +502,7 @@ version = "0.1.0"
 dependencies = [
  "cursive",
  "dotenv",
+ "lazy_static",
  "openai-api-rs",
 ]
 
