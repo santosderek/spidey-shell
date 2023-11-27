@@ -1,9 +1,10 @@
-use crate::ai::{fetch_completion, HISTORY};
+use crate::openai::{fetch_completion, HISTORY};
 
 use cursive::{
+    event::{Event, Key},
     view::{Nameable, Resizable, Scrollable},
     views::{Dialog, DummyView, LinearLayout, NamedView, TextArea, TextView},
-    Cursive, CursiveRunnable, event::{Event, Key},
+    Cursive, CursiveRunnable,
 };
 use openai_api_rs::v1::chat_completion::ChatCompletionMessage;
 

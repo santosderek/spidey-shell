@@ -6,7 +6,7 @@ use openai_api_rs::v1::chat_completion::{
 use openai_api_rs::v1::common::GPT4_1106_PREVIEW;
 use openai_api_rs::v1::error::APIError;
 use std::env;
-use std::sync::{Mutex, MutexGuard};
+use std::sync::{Mutex, MutexGuard, RwLock};
 
 lazy_static! {
     pub static ref HISTORY: Mutex<Vec<ChatCompletionMessage>> = Mutex::new(vec![]);

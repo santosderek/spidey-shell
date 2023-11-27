@@ -1,11 +1,11 @@
-mod ai;
+mod openai;
 mod user_interface;
 
 use dotenv::dotenv;
 
-use std::{path::Path, error::Error};
+use std::{error::Error, path::Path};
 
-fn main() -> Result<(), Box<dyn Error>>{
+fn main() -> Result<(), Box<dyn Error>> {
     // Check if file exists
 
     if !Path::new(".env").exists() {
