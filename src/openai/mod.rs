@@ -1,2 +1,4 @@
-pub mod openai;
-pub use openai::{fetch_completion, HISTORY};
+mod interface;
+mod api;
+
+pub use interface::{create_chat_layout, submit_input};
