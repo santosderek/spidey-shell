@@ -9,7 +9,7 @@ use openai_api_rs::v1::chat_completion::ChatCompletionMessage;
 
 /// Create a chat history view
 fn create_chat_history() -> NamedView<LinearLayout> {
-    let mut chat_history = LinearLayout::vertical();
+    let chat_history = LinearLayout::vertical();
 
     chat_history.with_name("chat_history")
 }

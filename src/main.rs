@@ -1,17 +1,15 @@
-mod user_interface;
 mod ai;
+mod user_interface;
 
 use dotenv::dotenv;
 
-use std::path::Path;
-use std::fs::File;
+use std::{path::Path, error::Error};
 
-fn main() {
-
+fn main() -> Result<(), Box<dyn Error>>{
     // Check if file exists
-    
+
     if !Path::new(".env").exists() {
-        File::create(".env").expect("Failed to create .env file");
+        return Err("No .env file found. Please create one with your OpenAI API key.".into());
     }
 
     dotenv().ok();
@@ -19,4 +17,5 @@ fn main() {
     let mut main_window = user_interface::create_main_window();
 
     main_window.run();
+    Ok(())
 }
