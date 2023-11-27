@@ -6,7 +6,6 @@ use dotenv::dotenv;
 use std::{error::Error, path::Path};
 
 fn main() -> Result<(), Box<dyn Error>> {
-    // Check if file exists
 
     if !Path::new(".env").exists() {
         return Err("No .env file found. Please create one with your OpenAI API key.".into());

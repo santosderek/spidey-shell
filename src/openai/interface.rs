@@ -68,7 +68,7 @@ pub fn submit_input(window: &mut Cursive) {
     window.call_on_name("chat_history", |view: &mut LinearLayout| {
         view.clear();
 
-        for message in HISTORY.lock().unwrap().iter() {
+        for message in HISTORY.read().unwrap().iter() {
             let message_text: String = format!("{:?}: {}", message.role, message.content);
             view.add_child(TextView::new(" "));
             view.add_child(TextView::new(message_text));
@@ -81,7 +81,7 @@ pub fn submit_input(window: &mut Cursive) {
         )));
     });
 
-    HISTORY.lock().unwrap().push(ChatCompletionMessage {
+    HISTORY.write().unwrap().push(ChatCompletionMessage {
         role: first_completion.message.role.clone(),
         content: completion_text,
         name: None,

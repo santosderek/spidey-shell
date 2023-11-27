@@ -6,10 +6,10 @@ use openai_api_rs::v1::chat_completion::{
 use openai_api_rs::v1::common::GPT4_1106_PREVIEW;
 use openai_api_rs::v1::error::APIError;
 use std::env;
-use std::sync::{Mutex, MutexGuard, RwLock};
+use std::sync::{RwLock, RwLockWriteGuard};
 
 lazy_static! {
-    pub static ref HISTORY: Mutex<Vec<ChatCompletionMessage>> = Mutex::new(vec![]);
+    pub static ref HISTORY: RwLock<Vec<ChatCompletionMessage>> = RwLock::new(vec![]);
 }
 // TODO: Need to make this return a Result
 fn get_openai_client() -> Client {
@@ -19,7 +19,7 @@ fn get_openai_client() -> Client {
 
 /// Fetch a completion from the OpenAI API
 pub fn fetch_completion(prompt: &str) -> Result<ChatCompletionResponse, APIError> {
-    let mut _history: MutexGuard<Vec<ChatCompletionMessage>> = HISTORY.lock().unwrap();
+    let mut _history: RwLockWriteGuard<Vec<ChatCompletionMessage>> = HISTORY.write().unwrap();
     _history.push(ChatCompletionMessage {
         role: MessageRole::user,
         content: String::from(prompt),
