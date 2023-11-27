@@ -7,4 +7,5 @@ edition = "2021"
 
 [dependencies]
 cursive = { version = "0.20.0", features = ["toml"] }
+openai-api-rs = "2.1.2"
 
