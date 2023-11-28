@@ -68,6 +68,17 @@ pub fn submit_input(window: &mut Cursive) {
         None => String::from("Error! Could not get completion text"),
     };
 
+    HISTORY.write().unwrap().push(ChatCompletionMessage {
+        role: first_completion.message.role.clone(),
+        content: completion_text,
+        name: None,
+        function_call: None,
+    });
+
+    fill_window_with_history(window);
+}
+
+pub fn fill_window_with_history(window: &mut Cursive) {
     window.call_on_name("chat_history", |view: &mut LinearLayout| {
         view.clear();
 
@@ -76,18 +87,5 @@ pub fn submit_input(window: &mut Cursive) {
             view.add_child(TextView::new(" "));
             view.add_child(TextView::new(message_text));
         }
-        // blank line for spacing
-        view.add_child(TextView::new(" "));
-        view.add_child(TextView::new(format!(
-            "{:?}: {}",
-            first_completion.message.role, completion_text
-        )));
-    });
-
-    HISTORY.write().unwrap().push(ChatCompletionMessage {
-        role: first_completion.message.role.clone(),
-        content: completion_text,
-        name: None,
-        function_call: None,
     });
 }
