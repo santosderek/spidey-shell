@@ -29,7 +29,10 @@ pub fn create_chat_layout() -> Dialog {
     let dialog = Dialog::around(vertical_chat)
         .title("OpenAI Chat")
         .button("Submit", submit_input)
-        .button("Quit", |_window| _window.quit());
+        .button("Quit", |_window| {
+            _window.pop_layer();
+            _window.add_layer(crate::menu::create_main_menu());
+        });
 
     return dialog;
 }
