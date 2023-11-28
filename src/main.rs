@@ -1,12 +1,12 @@
-mod openai;
-mod user_interface;
+extern crate spidey_shell;
+
+use spidey_shell::user_interface;
 
 use dotenv::dotenv;
 
 use std::{error::Error, path::Path};
 
 fn main() -> Result<(), Box<dyn Error>> {
-
     if !Path::new(".env").exists() {
         return Err("No .env file found. Please create one with your OpenAI API key.".into());
     }

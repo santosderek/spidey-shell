@@ -6,15 +6,20 @@ use openai_api_rs::v1::chat_completion::{
 use openai_api_rs::v1::common::GPT4_1106_PREVIEW;
 use openai_api_rs::v1::error::APIError;
 use std::env;
-use std::sync::{RwLock, RwLockWriteGuard};
+use std::error::Error;
+use std::sync::{Arc, RwLock, RwLockWriteGuard};
 
 lazy_static! {
-    pub static ref HISTORY: RwLock<Vec<ChatCompletionMessage>> = RwLock::new(vec![]);
+    pub static ref HISTORY: Arc<RwLock<Vec<ChatCompletionMessage>>> = Arc::new(RwLock::new(vec![]));
 }
-// TODO: Need to make this return a Result
-fn get_openai_client() -> Client {
-    let api_key = env::var("OPENAI_API_KEY").unwrap();
-    Client::new(api_key)
+
+/// Get an OpenAI environment variable from the environment and returns a client
+fn get_openai_client() -> Result<Client, Box<dyn Error>> {
+    let api_key = match env::var("OPENAI_API_KEY") {
+        Ok(key) => key,
+        Err(_) => return Err("Could not find OPENAI_API_KEY in environment".into()),
+    };
+    Ok(Client::new(api_key))
 }
 
 /// Fetch a completion from the OpenAI API
@@ -32,5 +37,9 @@ pub fn fetch_completion(prompt: &str) -> Result<ChatCompletionResponse, APIError
     _history.clear();
     _history.extend(req.messages.clone());
 
-    get_openai_client().chat_completion(req)
+    match get_openai_client() {
+        Ok(client) => client.chat_completion(req),
+        Err(error) => panic!("Error trying to get OpenAI client: {}", error),
+    }
 }
+
