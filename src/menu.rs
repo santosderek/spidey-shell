@@ -14,8 +14,7 @@ pub fn create_main_menu() -> NamedView<Dialog> {
     main_menu.add_child(
         LinearLayout::vertical().child(Button::new("Chat", |window| {
             window.pop_layer();
-            let layout = crate::openai::create_chat_layout();
-            window.add_layer(layout);
+            window.add_layer(crate::openai::create_chat_layout());
             fill_window_with_history(window);
         })),
     );

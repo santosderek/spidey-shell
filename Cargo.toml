@@ -10,6 +10,7 @@ include = ["assets/theme.toml"]
 [dependencies]
 cpal = "0.15.2"
 cursive = { version = "0.20.0", features = ["toml"] }
+dirs = "5.0.1"
 dotenv = "0.15.0"
 lazy_static = "1.4.0"
 openai-api-rs = "2.1.2"
