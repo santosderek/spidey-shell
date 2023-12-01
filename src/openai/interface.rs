@@ -4,8 +4,8 @@ use copypasta::{ClipboardContext, ClipboardProvider};
 use cursive::{
     align::HAlign,
     view::{Nameable, Resizable, Scrollable},
-    views::{Button, Dialog, DummyView, LinearLayout, SelectView, TextArea, TextView},
-    Cursive, View,
+    views::{Button, Dialog, DummyView, LinearLayout, TextArea, TextView},
+    Cursive,
 };
 
 use openai_api_rs::v1::chat_completion::ChatCompletionMessage;
@@ -121,12 +121,6 @@ pub fn fill_window_with_history(window: &mut Cursive) {
 
             let message_text: String = format!("{:?}: {}", message.role, message.content);
             let horizontal_layout = LinearLayout::horizontal()
-                .child(
-                    TextView::new(message_text.clone())
-                        .h_align(HAlign::Left)
-                        .with_name("history_text_".to_owned() + &position.to_string()),
-                )
-                .child(TextView::new(" ").h_align(HAlign::Right))
                 .child(Button::new("Copy", move |window| {
                     let message_text = window
                         .call_on_name(
@@ -135,7 +129,13 @@ pub fn fill_window_with_history(window: &mut Cursive) {
                         )
                         .unwrap();
                     copy_to_clipboard(window, &message_text);
-                }));
+                }))
+                .child(TextView::new(" ").h_align(HAlign::Right))
+                .child(
+                    TextView::new(message_text.clone())
+                        .h_align(HAlign::Left)
+                        .with_name("history_text_".to_owned() + &position.to_string()),
+                );
 
             view.add_child(horizontal_layout);
         }
