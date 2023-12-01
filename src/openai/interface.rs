@@ -29,6 +29,19 @@ pub fn create_chat_layout() -> Dialog {
     let dialog = Dialog::around(vertical_chat)
         .title("OpenAI Chat")
         .button("Submit", submit_input)
+        .button("Clear", |window| {
+            window
+                .call_on_name("openai_input_box", |view: &mut TextArea| {
+                    view.set_content("");
+                })
+                .unwrap();
+            window
+                .call_on_name("chat_history", |view: &mut LinearLayout| {
+                    view.clear();
+                })
+                .unwrap();
+            HISTORY.write().unwrap().clear();
+        })
         .button("Quit", |_window| {
             _window.pop_layer();
             _window.add_layer(crate::menu::create_main_menu());
