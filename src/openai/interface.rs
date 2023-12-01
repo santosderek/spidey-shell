@@ -1,8 +1,10 @@
 use super::api::{fetch_completion, HISTORY};
 
+use copypasta::{ClipboardContext, ClipboardProvider};
 use cursive::{
+    align::HAlign,
     view::{Nameable, Resizable, Scrollable},
-    views::{Dialog, DummyView, LinearLayout, TextArea, TextView},
+    views::{Dialog, DummyView, LinearLayout, SelectView, TextArea, TextView},
     Cursive,
 };
 
@@ -91,14 +93,34 @@ pub fn submit_input(window: &mut Cursive) {
     fill_window_with_history(window);
 }
 
+fn copy_to_clipboard<'a, 'b>(_window: &'a mut Cursive, text: &'b String) -> () {
+    let mut clipboard = match ClipboardContext::new() {
+        Ok(clipboard) => clipboard,
+        Err(error) => {
+            println!("Error trying to get clipboard: {}", error);
+            return;
+        }
+    };
+
+    match clipboard.set_contents(text.to_owned()) {
+        Ok(_) => {},
+        Err(error) => println!("Error trying to copy to clipboard: {}", error),
+    };
+}
+
 pub fn fill_window_with_history(window: &mut Cursive) {
     window.call_on_name("chat_history", |view: &mut LinearLayout| {
         view.clear();
 
         for message in HISTORY.read().unwrap().iter() {
-            let message_text: String = format!("{:?}: {}", message.role, message.content);
             view.add_child(TextView::new(" "));
-            view.add_child(TextView::new(message_text));
+
+            let message_text: String = format!("{:?}: {}", message.role, message.content);
+            let mut select_view: SelectView<_> = SelectView::new().h_align(HAlign::Left);
+
+            select_view.add_item(message_text.to_owned(), message_text.to_owned());
+            select_view.set_on_submit(copy_to_clipboard);
+            view.add_child(select_view);
         }
     });
 }
