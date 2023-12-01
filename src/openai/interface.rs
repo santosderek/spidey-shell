@@ -4,8 +4,8 @@ use copypasta::{ClipboardContext, ClipboardProvider};
 use cursive::{
     align::HAlign,
     view::{Nameable, Resizable, Scrollable},
-    views::{Dialog, DummyView, LinearLayout, SelectView, TextArea, TextView},
-    Cursive,
+    views::{Button, Dialog, DummyView, LinearLayout, SelectView, TextArea, TextView},
+    Cursive, View,
 };
 
 use openai_api_rs::v1::chat_completion::ChatCompletionMessage;
@@ -16,7 +16,11 @@ pub fn create_chat_layout() -> Dialog {
 
     chat_history.add_child(TextView::new("Start a conversation with OpenAI"));
     chat_history.add_child(DummyView);
-    chat_history.add_child(LinearLayout::vertical().with_name("chat_history"));
+    chat_history.add_child(
+        LinearLayout::vertical()
+            .with_name("chat_history")
+            .scrollable(),
+    );
     chat_history.add_child(DummyView);
     chat_history.add_child(
         TextArea::new()
@@ -93,7 +97,7 @@ pub fn submit_input(window: &mut Cursive) {
     fill_window_with_history(window);
 }
 
-fn copy_to_clipboard<'a, 'b>(_window: &'a mut Cursive, text: &'b String) -> () {
+fn copy_to_clipboard<'a>(_window: &'a mut Cursive, text: &String) -> () {
     let mut clipboard = match ClipboardContext::new() {
         Ok(clipboard) => clipboard,
         Err(error) => {
@@ -103,7 +107,7 @@ fn copy_to_clipboard<'a, 'b>(_window: &'a mut Cursive, text: &'b String) -> () {
     };
 
     match clipboard.set_contents(text.to_owned()) {
-        Ok(_) => {},
+        Ok(_) => {}
         Err(error) => println!("Error trying to copy to clipboard: {}", error),
     };
 }
@@ -112,15 +116,28 @@ pub fn fill_window_with_history(window: &mut Cursive) {
     window.call_on_name("chat_history", |view: &mut LinearLayout| {
         view.clear();
 
-        for message in HISTORY.read().unwrap().iter() {
+        for (position, message) in HISTORY.read().unwrap().iter().enumerate() {
             view.add_child(TextView::new(" "));
 
             let message_text: String = format!("{:?}: {}", message.role, message.content);
-            let mut select_view: SelectView<_> = SelectView::new().h_align(HAlign::Left);
+            let horizontal_layout = LinearLayout::horizontal()
+                .child(
+                    TextView::new(message_text.clone())
+                        .h_align(HAlign::Left)
+                        .with_name("history_text_".to_owned() + &position.to_string()),
+                )
+                .child(TextView::new(" ").h_align(HAlign::Right))
+                .child(Button::new("Copy", move |window| {
+                    let message_text = window
+                        .call_on_name(
+                            &("history_text_".to_owned() + &position.to_string()),
+                            |view: &mut TextView| (*view.get_content()).source().to_owned(),
+                        )
+                        .unwrap();
+                    copy_to_clipboard(window, &message_text);
+                }));
 
-            select_view.add_item(message_text.to_owned(), message_text.to_owned());
-            select_view.set_on_submit(copy_to_clipboard);
-            view.add_child(select_view);
+            view.add_child(horizontal_layout);
         }
     });
 }
