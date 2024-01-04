@@ -8,7 +8,8 @@ use std::{error::Error, path::Path};
 
 use dirs::home_dir;
 
-fn main() -> Result<(), Box<dyn Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
     let home_directory = home_dir().unwrap();
     let home_directory_env = home_directory.join(".env");
 
@@ -21,8 +22,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             "No .env file found in CWD or HOME. Please create one with your OpenAI API key.".into(),
         );
     }
-
-    dotenv().ok();
 
     let mut main_window = user_interface::create_main_window();
 
