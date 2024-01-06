@@ -42,4 +42,3 @@ pub fn fetch_completion(prompt: &str) -> Result<ChatCompletionResponse, APIError
         Err(error) => panic!("Error trying to get OpenAI client: {}", error),
     }
 }
-

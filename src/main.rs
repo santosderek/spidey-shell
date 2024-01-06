@@ -1,11 +1,8 @@
 extern crate spidey_shell;
 
 use spidey_shell::user_interface;
-
 use dotenv::dotenv;
-
 use std::{error::Error, path::Path};
-
 use dirs::home_dir;
 
 
@@ -31,7 +28,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     match load_environemnt()  {
         Ok(_) => {},
         Err(e) => {
-            println!("Error: {}", e);
             return Err(e); 
         }
     }
