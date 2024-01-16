@@ -1,6 +1,14 @@
 use openai_api_rs::v1::chat_completion::ChatCompletionMessage;
 
+pub enum CurrentScreen {
+    Main,
+    Chat,
+    History,
+}
+
 pub struct ApplicationStateModel {
+    pub current_screen: CurrentScreen,
+
     pub history: Vec<ChatCompletionMessage>,
     /// Name of the history file currently loaded
     pub history_name: String,
@@ -11,6 +19,7 @@ pub struct ApplicationStateModel {
 impl ApplicationStateModel {
     pub fn new() -> ApplicationStateModel {
         ApplicationStateModel {
+            current_screen: CurrentScreen::Main,
             history: Vec::new(),
             history_file_list: Vec::new(),
             history_name: String::new(),

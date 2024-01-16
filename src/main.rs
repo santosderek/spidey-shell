@@ -34,18 +34,30 @@ fn load_environemnt() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+fn render_ui<B>(
+    terminal: &mut Terminal<B>,
+    _state: &ApplicationStateModel,
+) -> Result<(), Box<dyn Error>>
+where
+    B: Backend,
+{
+    terminal.draw(|frame| {
+        let area = frame.size();
+        frame.render_widget(Paragraph::new("Hello Ratatui! (press 'q' to quit)"), area);
+    })?;
+
+    Ok(())
+}
+
 async fn run_event_loop<B>(terminal: &mut Terminal<B>) -> Result<(), Box<dyn Error>>
 where
     B: Backend,
 {
-    let mut model = ApplicationStateModel::new();
+    let mut state = ApplicationStateModel::new();
     let mut message = Message::NoOp;
 
     loop {
-        terminal.draw(|frame| {
-            let area = frame.size();
-            frame.render_widget(Paragraph::new("Hello Ratatui! (press 'q' to quit)"), area);
-        })?;
+        let _ = render_ui(terminal, &state);
 
         if event::poll(std::time::Duration::from_millis(16))? {
             if let event::Event::Key(key) = event::read()? {
@@ -55,7 +67,7 @@ where
             }
         }
 
-        message = update(&mut model, &message).unwrap();
+        message = update(&mut state, &message).unwrap();
     }
 }
 
