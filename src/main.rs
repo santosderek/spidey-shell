@@ -10,7 +10,11 @@ use spidey_shell::elm::{update, ApplicationStateModel, Message};
 use dirs::home_dir;
 
 use dotenv::dotenv;
-use ratatui::{backend::CrosstermBackend, widgets::Paragraph, Terminal};
+use ratatui::{
+    backend::{Backend, CrosstermBackend},
+    widgets::Paragraph,
+    Terminal,
+};
 use std::{error::Error, io::stdout, path::Path};
 
 fn load_environemnt() -> Result<(), Box<dyn Error>> {
@@ -30,6 +34,31 @@ fn load_environemnt() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+async fn run_event_loop<B>(terminal: &mut Terminal<B>) -> Result<(), Box<dyn Error>>
+where
+    B: Backend,
+{
+    let mut model = ApplicationStateModel::new();
+    let mut message = Message::NoOp;
+
+    loop {
+        terminal.draw(|frame| {
+            let area = frame.size();
+            frame.render_widget(Paragraph::new("Hello Ratatui! (press 'q' to quit)"), area);
+        })?;
+
+        if event::poll(std::time::Duration::from_millis(16))? {
+            if let event::Event::Key(key) = event::read()? {
+                if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
+                    break Ok(());
+                }
+            }
+        }
+
+        message = update(&mut model, &message).unwrap();
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     match load_environemnt() {
@@ -45,26 +74,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
     terminal.clear()?;
 
-    let mut model = ApplicationStateModel::new();
-
-    let mut message = Message::NoOp;
-
-    loop {
-        terminal.draw(|frame| {
-            let area = frame.size();
-            frame.render_widget(Paragraph::new("Hello Ratatui! (press 'q' to quit)"), area);
-        })?;
-
-        if event::poll(std::time::Duration::from_millis(16))? {
-            if let event::Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
-                    break;
-                }
-            }
-        }
-
-        message = update(&mut model, &message).unwrap();
-    }
+    let _ = run_event_loop(&mut terminal).await;
 
     stdout().execute(LeaveAlternateScreen)?;
     disable_raw_mode()?;
