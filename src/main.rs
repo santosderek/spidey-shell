@@ -5,6 +5,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
+use spidey_shell::elm::{update, ApplicationStateModel, Message};
 
 use dirs::home_dir;
 
@@ -44,6 +45,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
     terminal.clear()?;
 
+    let mut model = ApplicationStateModel::new();
+
+    let mut message = Message::NoOp;
+
     loop {
         terminal.draw(|frame| {
             let area = frame.size();
@@ -57,6 +62,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 }
             }
         }
+
+        message = update(&mut model, &message).unwrap();
     }
 
     stdout().execute(LeaveAlternateScreen)?;
