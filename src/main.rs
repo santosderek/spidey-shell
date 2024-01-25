@@ -1,20 +1,13 @@
 extern crate spidey_shell;
 
 use crossterm::{
-    event::{self, KeyCode, KeyEventKind},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
-use spidey_shell::elm::{update, ApplicationStateModel, Message};
-
 use dirs::home_dir;
-
 use dotenv::dotenv;
-use ratatui::{
-    backend::{Backend, CrosstermBackend},
-    widgets::Paragraph,
-    Terminal,
-};
+use ratatui::{backend::CrosstermBackend, Terminal};
+use spidey_shell::elm::run_event_loop;
 use std::{error::Error, io::stdout, path::Path};
 
 fn load_environemnt() -> Result<(), Box<dyn Error>> {
@@ -32,43 +25,6 @@ fn load_environemnt() -> Result<(), Box<dyn Error>> {
     }
 
     Ok(())
-}
-
-fn render_ui<B>(
-    terminal: &mut Terminal<B>,
-    _state: &ApplicationStateModel,
-) -> Result<(), Box<dyn Error>>
-where
-    B: Backend,
-{
-    terminal.draw(|frame| {
-        let area = frame.size();
-        frame.render_widget(Paragraph::new("Hello Ratatui! (press 'q' to quit)"), area);
-    })?;
-
-    Ok(())
-}
-
-async fn run_event_loop<B>(terminal: &mut Terminal<B>) -> Result<(), Box<dyn Error>>
-where
-    B: Backend,
-{
-    let mut state = ApplicationStateModel::new();
-    let mut message = Message::NoOp;
-
-    loop {
-        let _ = render_ui(terminal, &state);
-
-        if event::poll(std::time::Duration::from_millis(16))? {
-            if let event::Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
-                    break Ok(());
-                }
-            }
-        }
-
-        message = update(&mut state, &message).unwrap();
-    }
 }
 
 #[tokio::main]
