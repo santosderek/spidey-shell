@@ -1,6 +1,7 @@
+use super::model::{CurrentScreen, MenuMessage, RunningState};
 use super::{render, update};
-use super::{ApplicationStateModel, Message};
-use crossterm::event::{self, KeyCode, KeyEventKind};
+use super::{ApplicationStateModel, EventMessage};
+use crossterm::event::{self, KeyCode};
 use ratatui::{backend::Backend, Terminal};
 use std::error::Error;
 use std::time::Duration;
@@ -11,19 +12,40 @@ where
     B: Backend,
 {
     let mut state = ApplicationStateModel::new();
-    let mut message = Message::NoOp;
 
-    loop {
-        let _ = render(terminal, &state);
+    while state.running_state != RunningState::Done {
+        let mut state = render(terminal, &mut state);
+        let mut message = EventMessage::NoOp;
 
         if event::poll(Duration::from_millis(16))? {
             if let event::Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press && key.code == KeyCode::Char('q') {
-                    break Ok(());
+                if state.current_screen == CurrentScreen::Menu {
+                    message = match key.code {
+                        KeyCode::Char('h') | KeyCode::Left => {
+                            EventMessage::MenuAction(MenuMessage::SelectPrevious)
+                        }
+                        KeyCode::Char('j') | KeyCode::Down => {
+                            EventMessage::MenuAction(MenuMessage::SelectNext)
+                        }
+                        KeyCode::Char('k') | KeyCode::Up => {
+                            EventMessage::MenuAction(MenuMessage::SelectPrevious)
+                        }
+                        KeyCode::Char('l') | KeyCode::Right => {
+                            EventMessage::MenuAction(MenuMessage::SelectNext)
+                        }
+                        KeyCode::Enter => EventMessage::MenuAction(MenuMessage::SelectItem),
+                        _ => EventMessage::NoOp,
+                    };
+                }
+
+                // global actions
+                if key.code == KeyCode::Esc || key.code == KeyCode::Char('q') {
+                    state.running_state = RunningState::Done;
                 }
             }
         }
 
-        message = update(&mut state, &message).unwrap();
+        update(&mut state, &message).unwrap();
     }
+    return Ok(());
 }

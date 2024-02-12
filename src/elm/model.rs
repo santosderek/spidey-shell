@@ -1,14 +1,81 @@
 use openai_api_rs::v1::chat_completion::ChatCompletionMessage;
+use ratatui::widgets::ListState;
 
+#[derive(Clone, Copy, Eq, PartialEq)]
 pub enum CurrentScreen {
-    Main,
+    Menu,
     Chat,
     History,
 }
 
-pub struct ApplicationStateModel {
-    pub current_screen: CurrentScreen,
+#[derive(Default, Eq, PartialEq)]
+pub enum RunningState {
+    #[default]
+    Running,
+    Done,
+}
 
+pub struct MenuState {
+    pub items: Vec<String>,
+    pub state: ListState,
+}
+
+impl MenuState {
+    pub fn new() -> MenuState {
+        let mut state = ListState::default();
+        state.select(Some(0));
+
+        MenuState {
+            items: vec![
+                "Chat".to_string(),
+                "History".to_string(),
+                "Quit".to_string(),
+            ],
+            state,
+        }
+    }
+}
+impl MenuState {
+    fn select_next(&mut self) {
+        let selected = self.state.selected();
+        let next = match selected {
+            Some(i) => {
+                if i >= self.items.len() - 1 {
+                    0
+                } else {
+                    i + 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(next));
+    }
+
+    fn select_previous(&mut self) {
+        let selected = self.state.selected();
+        let previous = match selected {
+            Some(i) => {
+                if i == 0 {
+                    self.items.len() - 1
+                } else {
+                    i - 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(previous));
+    }
+}
+
+pub struct ApplicationStateModel {
+    /* The Global State of the Application */
+    pub current_screen: CurrentScreen,
+    pub running_state: RunningState,
+
+    /* Menu Specific State */
+    pub menu_state: MenuState,
+
+    /* The OpenAI Chat API Specific State */
     pub history: Vec<ChatCompletionMessage>,
     /// Name of the history file currently loaded
     pub history_name: String,
@@ -19,10 +86,12 @@ pub struct ApplicationStateModel {
 impl ApplicationStateModel {
     pub fn new() -> ApplicationStateModel {
         ApplicationStateModel {
-            current_screen: CurrentScreen::Main,
+            current_screen: CurrentScreen::Menu,
             history: Vec::new(),
             history_file_list: Vec::new(),
             history_name: String::new(),
+            running_state: RunningState::Running,
+            menu_state: MenuState::new(),
         }
     }
 
@@ -30,66 +99,63 @@ impl ApplicationStateModel {
         self.history.push(history);
     }
 
-    // pub fn remove_history(&mut self, history: ChatCompletionMessage) {
-    //     self.history.retain(|x| x != &history);
-    // }
-
     pub fn clear_history(&mut self) {
         self.history.clear();
     }
-
-    // pub fn load_history_file(&mut self, filename: String) {
-    //     self.history_name = filename;
-    //     self.history = load_history(filename);
-    // }
 }
 
 #[derive(Clone)]
-pub enum Message {
-    /// Load a history file
-    LoadHistoryFile(String),
-    /// Save the current history to a file
-    SaveHistoryFile(String),
-    /// Add a message to the history
-    AddHistory(ChatCompletionMessage),
-    /// Remove a message from the history
-    RemoveHistory(ChatCompletionMessage),
-    /// Clear the history
-    ClearHistory,
-    /// Update the history file list
-    UpdateHistoryFileList,
+pub enum MenuMessage {
+    SelectItem,
+    SelectNext,
+    SelectPrevious,
+    NoOp,
+}
+
+#[derive(Clone)]
+pub enum ChatMessage {
+    AddMessage(ChatCompletionMessage),
+    RemoveMessage(ChatCompletionMessage),
+    ClearMessages,
+    NoOp,
+}
+
+#[derive(Clone)]
+pub enum EventMessage {
+    MenuAction(MenuMessage),
+    ChatAction(ChatMessage),
     // Do Nothing
     NoOp,
 }
 
-pub fn update<'a>(model: &mut ApplicationStateModel, msg: &Message) -> Option<Message> {
+pub fn update<'a>(state: &mut ApplicationStateModel, msg: &EventMessage) -> Option<EventMessage> {
     match msg {
-        // Message::LoadHistoryFile(filename) => {
-        //     model.history_name = filename;
-        //     model.history = model.load_history_file(filename);
-        //     msg
-        // }
+        EventMessage::MenuAction(action) => {
+            match action {
+                MenuMessage::SelectNext => {
+                    state.menu_state.select_next();
+                }
+                MenuMessage::SelectPrevious => {
+                    state.menu_state.select_previous();
+                }
 
-        // Message::SaveHistoryFile(filename) => {
-        //     save_history(filename, model.history);
-        //     msg
-        // }
-        Message::AddHistory(chat_message) => {
-            model.add_history(chat_message.clone());
+                MenuMessage::SelectItem => match state.menu_state.state.selected() {
+                    Some(0) => {
+                        state.current_screen = CurrentScreen::Chat;
+                    }
+                    Some(1) => {
+                        state.current_screen = CurrentScreen::History;
+                    }
+                    Some(2) => {
+                        state.running_state = RunningState::Done;
+                    }
+                    _ => {}
+                },
+                MenuMessage::NoOp => {}
+            }
+
             Some(msg.clone())
         }
-        // Message::RemoveHistory(message) => {
-        //     model.remove_history(message);
-        //     msg
-        // }
-        Message::ClearHistory => {
-            model.clear_history();
-            Some(msg.clone())
-        }
-        // Message::UpdateHistoryFileList => {
-        //     model.history_file_list = get_history_file_list();
-        //     msg
-        // }
         _ => Some(msg.clone()),
     }
 }
