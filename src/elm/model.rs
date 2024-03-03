@@ -1,5 +1,4 @@
 use openai_api_rs::v1::chat_completion::ChatCompletionMessage;
-use ratatui::widgets::ListState;
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub enum CurrentScreen {
@@ -15,55 +14,88 @@ pub enum RunningState {
     Done,
 }
 
-pub struct MenuState {
-    pub items: Vec<String>,
-    pub state: ListState,
-}
+mod menu {
+    use ratatui::widgets::ListState;
+    use ratatui::{
+        layout::Rect,
+        style::{Color, Modifier, Style},
+        text::Text,
+        widgets::{Block, Borders, List, ListItem},
+        Frame,
+    };
 
-impl MenuState {
-    pub fn new() -> MenuState {
-        let mut state = ListState::default();
-        state.select(Some(0));
+    use crate::elm::ApplicationStateModel;
+    pub struct MenuState {
+        pub items: Vec<String>,
+        pub state: ListState,
+    }
 
-        MenuState {
-            items: vec![
-                "Chat".to_string(),
-                "History".to_string(),
-                "Quit".to_string(),
-            ],
-            state,
+    impl MenuState {
+        pub fn new(items: Vec<&str>) -> MenuState {
+            let mut state = ListState::default();
+            state.select(Some(0));
+
+            let items = items.iter().map(|i| i.to_string()).collect();
+
+            MenuState { items, state }
         }
-    }
-}
-impl MenuState {
-    fn select_next(&mut self) {
-        let selected = self.state.selected();
-        let next = match selected {
-            Some(i) => {
-                if i >= self.items.len() - 1 {
-                    0
-                } else {
-                    i + 1
-                }
-            }
-            None => 0,
-        };
-        self.state.select(Some(next));
-    }
 
-    fn select_previous(&mut self) {
-        let selected = self.state.selected();
-        let previous = match selected {
-            Some(i) => {
-                if i == 0 {
-                    self.items.len() - 1
-                } else {
-                    i - 1
+        pub fn select_next(&mut self) {
+            let selected = self.state.selected();
+            let next = match selected {
+                Some(i) => {
+                    if i >= self.items.len() - 1 {
+                        0
+                    } else {
+                        i + 1
+                    }
                 }
-            }
-            None => 0,
-        };
-        self.state.select(Some(previous));
+                None => 0,
+            };
+            self.state.select(Some(next));
+        }
+
+        pub fn select_previous(&mut self) {
+            let selected = self.state.selected();
+            let previous = match selected {
+                Some(i) => {
+                    if i == 0 {
+                        self.items.len() - 1
+                    } else {
+                        i - 1
+                    }
+                }
+                None => 0,
+            };
+            self.state.select(Some(previous));
+        }
+
+        pub fn render(&self, frame: &mut Frame<'_>, chunk: Rect, state: &ApplicationStateModel) {
+            let (current_menu, title) = match state.current_screen {
+                super::CurrentScreen::Menu => (&state.root_menu_state, "Main Menu"),
+                super::CurrentScreen::Chat => (&state.chat_menu_state, "Chat"),
+                super::CurrentScreen::History => (&state.history_menu_state, "History"),
+            };
+            let list: List = List::new(
+                current_menu
+                    .items
+                    .iter()
+                    .map(|i| ListItem::new(Text::from(i.as_str())))
+                    .collect::<Vec<ListItem>>(),
+            );
+
+            frame.render_stateful_widget(
+                list.block(Block::default().borders(Borders::ALL).title(title))
+                    .highlight_style(
+                        Style::default()
+                            .add_modifier(Modifier::BOLD)
+                            .add_modifier(Modifier::REVERSED)
+                            .fg(Color::LightBlue),
+                    ),
+                chunk,
+                &mut current_menu.state.clone(),
+            );
+        }
     }
 }
 
@@ -73,7 +105,9 @@ pub struct ApplicationStateModel {
     pub running_state: RunningState,
 
     /* Menu Specific State */
-    pub menu_state: MenuState,
+    pub root_menu_state: menu::MenuState,
+    pub chat_menu_state: menu::MenuState,
+    pub history_menu_state: menu::MenuState,
 
     /* The OpenAI Chat API Specific State */
     pub history: Vec<ChatCompletionMessage>,
@@ -91,7 +125,9 @@ impl ApplicationStateModel {
             history_file_list: Vec::new(),
             history_name: String::new(),
             running_state: RunningState::Running,
-            menu_state: MenuState::new(),
+            root_menu_state: menu::MenuState::new(vec!["Chat", "History", "Quit"]),
+            chat_menu_state: menu::MenuState::new(vec!["Send Message", "Back"]),
+            history_menu_state: menu::MenuState::new(vec!["See History", "Back"]),
         }
     }
 
@@ -123,8 +159,6 @@ pub enum ChatMessage {
 #[derive(Clone)]
 pub enum EventMessage {
     MenuAction(MenuMessage),
-    ChatAction(ChatMessage),
-    // Do Nothing
     NoOp,
 }
 
@@ -133,29 +167,70 @@ pub fn update<'a>(state: &mut ApplicationStateModel, msg: &EventMessage) -> Opti
         EventMessage::MenuAction(action) => {
             match action {
                 MenuMessage::SelectNext => {
-                    state.menu_state.select_next();
-                }
-                MenuMessage::SelectPrevious => {
-                    state.menu_state.select_previous();
+                    if state.current_screen == CurrentScreen::Menu {
+                        state.root_menu_state.select_next();
+                    } else if state.current_screen == CurrentScreen::Chat {
+                        state.chat_menu_state.select_next();
+                    } else if state.current_screen == CurrentScreen::History {
+                        state.history_menu_state.select_next();
+                    }
                 }
 
-                MenuMessage::SelectItem => match state.menu_state.state.selected() {
-                    Some(0) => {
-                        state.current_screen = CurrentScreen::Chat;
+                MenuMessage::SelectPrevious => {
+                    if state.current_screen == CurrentScreen::Menu {
+                        state.root_menu_state.select_previous();
+                    } else if state.current_screen == CurrentScreen::Chat {
+                        state.chat_menu_state.select_previous();
+                    } else if state.current_screen == CurrentScreen::History {
+                        state.history_menu_state.select_previous();
                     }
-                    Some(1) => {
-                        state.current_screen = CurrentScreen::History;
+                }
+
+                MenuMessage::SelectItem if state.current_screen == CurrentScreen::Menu => {
+                    match state.root_menu_state.state.selected() {
+                        Some(0) => {
+                            state.current_screen = CurrentScreen::Chat;
+                        }
+                        Some(1) => {
+                            state.current_screen = CurrentScreen::History;
+                        }
+                        Some(2) => {
+                            state.running_state = RunningState::Done;
+                        }
+                        _ => {}
                     }
-                    Some(2) => {
-                        state.running_state = RunningState::Done;
+                }
+                MenuMessage::SelectItem if state.current_screen == CurrentScreen::Chat => {
+                    match state.chat_menu_state.state.selected() {
+                        Some(0) => {
+                            // Send Message
+                        }
+                        Some(1) => {
+                            state.chat_menu_state.state.select(Some(0));
+                            state.current_screen = CurrentScreen::Menu;
+                        }
+                        _ => {}
                     }
-                    _ => {}
-                },
+                }
+                MenuMessage::SelectItem if state.current_screen == CurrentScreen::History => {
+                    match state.history_menu_state.state.selected() {
+                        Some(0) => {
+                            // See History
+                        }
+                        Some(1) => {
+                            state.history_menu_state.state.select(Some(0));
+                            state.current_screen = CurrentScreen::Menu;
+                        }
+                        _ => {}
+                    }
+                }
                 MenuMessage::NoOp => {}
+                _ => {}
             }
 
             Some(msg.clone())
         }
+
         _ => Some(msg.clone()),
     }
 }

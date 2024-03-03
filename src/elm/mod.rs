@@ -1,3 +1,4 @@
+pub mod chat;
 pub mod events;
 pub mod model;
 pub mod ui;

@@ -42,39 +42,13 @@ where
 
         match state.current_screen {
             CurrentScreen::Menu => {
-                let list: List = List::new(
-                    state
-                        .menu_state
-                        .items
-                        .iter()
-                        .map(|i| ListItem::new(Text::from(i.as_str())))
-                        .collect::<Vec<ListItem>>(),
-                );
-
-                frame.render_stateful_widget(
-                    list.block(Block::default().borders(Borders::ALL).title("Menu"))
-                        .highlight_style(
-                            Style::default()
-                                .add_modifier(Modifier::BOLD)
-                                .add_modifier(Modifier::REVERSED)
-                                .fg(Color::LightBlue),
-                        ),
-                    chunks,
-                    &mut state.menu_state.state,
-                );
+                state.root_menu_state.render(frame, chunks, state);
             }
             CurrentScreen::Chat => {
-                let chat = Paragraph::new(Text::from("Chat"))
-                    .block(Block::default().borders(Borders::ALL).title("Chat"))
-                    .alignment(Alignment::Center);
-                frame.render_widget(chat, chunks);
+                state.chat_menu_state.render(frame, chunks, state);
             }
             CurrentScreen::History => {
-                let history = Paragraph::new(Text::from("History"))
-                    .block(Block::default().borders(Borders::ALL).title("History"))
-                    .alignment(Alignment::Center);
-
-                frame.render_widget(history, chunks);
+                state.history_menu_state.render(frame, chunks, state);
             }
         }
     });

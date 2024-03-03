@@ -11,6 +11,7 @@ pub async fn run_event_loop<B>(terminal: &mut Terminal<B>) -> Result<(), Box<dyn
 where
     B: Backend,
 {
+    /* Basically the global state: */
     let mut state = ApplicationStateModel::new();
 
     while state.running_state != RunningState::Done {
@@ -19,23 +20,25 @@ where
 
         if event::poll(Duration::from_millis(16))? {
             if let event::Event::Key(key) = event::read()? {
-                if state.current_screen == CurrentScreen::Menu {
-                    message = match key.code {
-                        KeyCode::Char('h') | KeyCode::Left => {
-                            EventMessage::MenuAction(MenuMessage::SelectPrevious)
-                        }
-                        KeyCode::Char('j') | KeyCode::Down => {
-                            EventMessage::MenuAction(MenuMessage::SelectNext)
-                        }
-                        KeyCode::Char('k') | KeyCode::Up => {
-                            EventMessage::MenuAction(MenuMessage::SelectPrevious)
-                        }
-                        KeyCode::Char('l') | KeyCode::Right => {
-                            EventMessage::MenuAction(MenuMessage::SelectNext)
-                        }
-                        KeyCode::Enter => EventMessage::MenuAction(MenuMessage::SelectItem),
-                        _ => EventMessage::NoOp,
-                    };
+                match state.current_screen {
+                    CurrentScreen::Menu | CurrentScreen::Chat | CurrentScreen::History => {
+                        message = match key.code {
+                            KeyCode::Char('h') | KeyCode::Left => {
+                                EventMessage::MenuAction(MenuMessage::SelectPrevious)
+                            }
+                            KeyCode::Char('j') | KeyCode::Down => {
+                                EventMessage::MenuAction(MenuMessage::SelectNext)
+                            }
+                            KeyCode::Char('k') | KeyCode::Up => {
+                                EventMessage::MenuAction(MenuMessage::SelectPrevious)
+                            }
+                            KeyCode::Char('l') | KeyCode::Right => {
+                                EventMessage::MenuAction(MenuMessage::SelectNext)
+                            }
+                            KeyCode::Enter => EventMessage::MenuAction(MenuMessage::SelectItem),
+                            _ => EventMessage::NoOp,
+                        };
+                    }
                 }
 
                 // global actions
