@@ -40,13 +40,32 @@ where
                         };
                     }
 
-                    CurrentScreen::Chat => {
-                        state.chat_text_area.input(key);
-                    }
+                    CurrentScreen::Chat => match (state.in_chat_area, key.code, key.modifiers) {
+                        (_, KeyCode::Char('j'), event::KeyModifiers::CONTROL)
+                        | (_, KeyCode::Char('k'), event::KeyModifiers::CONTROL) => {
+                            state.in_chat_area = !state.in_chat_area;
+                        }
+                        (false, KeyCode::Char('j'), _) => {
+                            message = EventMessage::MenuAction(MenuMessage::SelectNext);
+                        }
+                        (false, KeyCode::Char('k'), _) => {
+                            message = EventMessage::MenuAction(MenuMessage::SelectPrevious);
+                        }
+                        (false, KeyCode::Enter, _) => {
+                            message = EventMessage::MenuAction(MenuMessage::SelectItem);
+                        }
+                        (true, KeyCode::Esc, _) => {
+                            state.in_chat_area = false;
+                        }
+                        (true, _, _) => {
+                            state.chat_text_area.input(key);
+                        }
+                        _ => {}
+                    },
                 }
 
-                // global actions
-                if key.code == KeyCode::Esc || key.code == KeyCode::Char('q') {
+                // exit if CTRL + q is pressed
+                if key.modifiers == event::KeyModifiers::CONTROL && key.code == KeyCode::Char('q') {
                     state.running_state = RunningState::Done;
                 }
             }

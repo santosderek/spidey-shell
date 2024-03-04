@@ -115,8 +115,10 @@ pub struct ApplicationStateModel<'a> {
     pub history_name: String,
     /// Available history files in the cache directory
     pub history_file_list: Vec<String>,
-    // The text area for the chat
+    /// The text area for the chat
     pub chat_text_area: tui_textarea::TextArea<'a>,
+    /// This is used to determine if the user is currently typing in the chat area
+    pub in_chat_area: bool,
 }
 
 impl ApplicationStateModel<'_> {
@@ -128,9 +130,10 @@ impl ApplicationStateModel<'_> {
             history_name: String::new(),
             running_state: RunningState::Running,
             root_menu_state: menu::MenuState::new(vec!["Chat", "History", "Quit"]),
-            chat_menu_state: menu::MenuState::new(vec!["Send Message", "Back"]),
+            chat_menu_state: menu::MenuState::new(vec!["Submit", "Edit Message", "Back"]),
             history_menu_state: menu::MenuState::new(vec!["See History", "Back"]),
             chat_text_area: tui_textarea::TextArea::default(),
+            in_chat_area: true,
         }
     }
 
@@ -209,6 +212,9 @@ pub fn update<'a>(
                             // Send Message
                         }
                         Some(1) => {
+                            state.in_chat_area = true;
+                        }
+                        Some(2) => {
                             state.chat_menu_state.state.select(Some(0));
                             state.current_screen = CurrentScreen::Menu;
                         }

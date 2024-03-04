@@ -1,4 +1,4 @@
-use super::{model::CurrentScreen, ApplicationStateModel};
+use super::{chat::render as render_chat, model::CurrentScreen, ApplicationStateModel};
 use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
@@ -42,16 +42,7 @@ where
                 state.root_menu_state.render(frame, chunk, state);
             }
             CurrentScreen::Chat => {
-                let layout = Layout::default()
-                    .direction(Direction::Vertical)
-                    .constraints([Constraint::Percentage(90), Constraint::Percentage(10)])
-                    .split(chunk);
-                let textarea = &mut state.chat_text_area;
-
-                frame.render_widget(textarea.widget(), layout[1]);
-
-                // render_chat(frame, chunk, state);
-                // state.chat_menu_state.render(frame, chunk, state);
+                render_chat(frame, chunk, state);
             }
             CurrentScreen::History => {
                 state.history_menu_state.render(frame, chunk, state);
