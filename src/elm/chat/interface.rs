@@ -23,6 +23,7 @@ pub fn render(frame: &mut Frame<'_>, chunk: Rect, state: &ApplicationStateModel)
     let chat = Block::default().title("Message").borders(Borders::ALL);
     textarea.set_block(chat);
 
+    /* If we are in the chat area, we will change the cursor style. */
     if state.in_chat_area {
         textarea.set_cursor_style(Style::default().bg(ratatui::style::Color::White));
     } else {

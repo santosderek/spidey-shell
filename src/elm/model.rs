@@ -24,7 +24,7 @@ mod menu {
         Frame,
     };
 
-    use crate::elm::ApplicationStateModel;
+    use super::ApplicationStateModel;
     pub struct MenuState {
         pub items: Vec<String>,
         pub state: ListState,
@@ -43,11 +43,11 @@ mod menu {
         pub fn select_next(&mut self) {
             let selected = self.state.selected();
             let next = match selected {
-                Some(i) => {
-                    if i >= self.items.len() - 1 {
+                Some(count) => {
+                    if count >= self.items.len() - 1 {
                         0
                     } else {
-                        i + 1
+                        count + 1
                     }
                 }
                 None => 0,
@@ -58,11 +58,11 @@ mod menu {
         pub fn select_previous(&mut self) {
             let selected = self.state.selected();
             let previous = match selected {
-                Some(i) => {
-                    if i == 0 {
+                Some(count) => {
+                    if count == 0 {
                         self.items.len() - 1
                     } else {
-                        i - 1
+                        count - 1
                     }
                 }
                 None => 0,
