@@ -99,7 +99,7 @@ mod menu {
     }
 }
 
-pub struct ApplicationStateModel {
+pub struct ApplicationStateModel<'a> {
     /* The Global State of the Application */
     pub current_screen: CurrentScreen,
     pub running_state: RunningState,
@@ -115,10 +115,12 @@ pub struct ApplicationStateModel {
     pub history_name: String,
     /// Available history files in the cache directory
     pub history_file_list: Vec<String>,
+    // The text area for the chat
+    pub chat_text_area: tui_textarea::TextArea<'a>,
 }
 
-impl ApplicationStateModel {
-    pub fn new() -> ApplicationStateModel {
+impl ApplicationStateModel<'_> {
+    pub fn new<'a>() -> ApplicationStateModel<'a> {
         ApplicationStateModel {
             current_screen: CurrentScreen::Menu,
             history: Vec::new(),
@@ -128,6 +130,7 @@ impl ApplicationStateModel {
             root_menu_state: menu::MenuState::new(vec!["Chat", "History", "Quit"]),
             chat_menu_state: menu::MenuState::new(vec!["Send Message", "Back"]),
             history_menu_state: menu::MenuState::new(vec!["See History", "Back"]),
+            chat_text_area: tui_textarea::TextArea::default(),
         }
     }
 

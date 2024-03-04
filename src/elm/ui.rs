@@ -1,10 +1,7 @@
 use super::{model::CurrentScreen, ApplicationStateModel};
 use ratatui::{
     backend::Backend,
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
-    text::Text,
-    widgets::{Block, Borders, List, ListItem, Paragraph},
+    layout::{Constraint, Direction, Layout, Rect},
     Terminal,
 };
 
@@ -31,24 +28,33 @@ fn centered_rect(r: Rect, percent_x: u16, percent_y: u16) -> Rect {
 /// Renders the UI based on the current state.
 pub fn render<'a, B>(
     terminal: &mut Terminal<B>,
-    state: &'a mut ApplicationStateModel,
-) -> &'a mut ApplicationStateModel
+    state: &'a mut ApplicationStateModel<'a>,
+) -> &'a mut ApplicationStateModel<'a>
 where
     B: Backend,
 {
     let result = terminal.draw(|frame| {
         let size = frame.size();
-        let chunks = centered_rect(size, 50, 50);
+        let chunk = centered_rect(size, 50, 50);
 
         match state.current_screen {
             CurrentScreen::Menu => {
-                state.root_menu_state.render(frame, chunks, state);
+                state.root_menu_state.render(frame, chunk, state);
             }
             CurrentScreen::Chat => {
-                state.chat_menu_state.render(frame, chunks, state);
+                let layout = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints([Constraint::Percentage(90), Constraint::Percentage(10)])
+                    .split(chunk);
+                let textarea = &mut state.chat_text_area;
+
+                frame.render_widget(textarea.widget(), layout[1]);
+
+                // render_chat(frame, chunk, state);
+                // state.chat_menu_state.render(frame, chunk, state);
             }
             CurrentScreen::History => {
-                state.history_menu_state.render(frame, chunks, state);
+                state.history_menu_state.render(frame, chunk, state);
             }
         }
     });

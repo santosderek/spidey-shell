@@ -12,16 +12,16 @@ where
     B: Backend,
 {
     /* Basically the global state: */
-    let mut state = ApplicationStateModel::new();
+    let mut state = &mut ApplicationStateModel::new();
 
     while state.running_state != RunningState::Done {
-        let mut state = render(terminal, &mut state);
+        state = render(terminal, state);
         let mut message = EventMessage::NoOp;
 
         if event::poll(Duration::from_millis(16))? {
             if let event::Event::Key(key) = event::read()? {
                 match state.current_screen {
-                    CurrentScreen::Menu | CurrentScreen::Chat | CurrentScreen::History => {
+                    CurrentScreen::Menu | CurrentScreen::History => {
                         message = match key.code {
                             KeyCode::Char('h') | KeyCode::Left => {
                                 EventMessage::MenuAction(MenuMessage::SelectPrevious)
@@ -38,6 +38,10 @@ where
                             KeyCode::Enter => EventMessage::MenuAction(MenuMessage::SelectItem),
                             _ => EventMessage::NoOp,
                         };
+                    }
+
+                    CurrentScreen::Chat => {
+                        state.chat_text_area.input(key);
                     }
                 }
 
