@@ -162,28 +162,28 @@ pub enum EventMessage {
     NoOp,
 }
 
-pub fn update<'a>(state: &mut ApplicationStateModel, msg: &EventMessage) -> Option<EventMessage> {
+pub fn update<'a>(
+    state: &'a mut ApplicationStateModel,
+    msg: &EventMessage,
+) -> Option<EventMessage> {
+    let get_state_for_current_screen =
+        |state: &'a mut ApplicationStateModel| -> &'a mut menu::MenuState {
+            match state.current_screen {
+                CurrentScreen::Menu => &mut state.root_menu_state,
+                CurrentScreen::Chat => &mut state.chat_menu_state,
+                CurrentScreen::History => &mut state.history_menu_state,
+            }
+        };
+
     match msg {
         EventMessage::MenuAction(action) => {
             match action {
                 MenuMessage::SelectNext => {
-                    if state.current_screen == CurrentScreen::Menu {
-                        state.root_menu_state.select_next();
-                    } else if state.current_screen == CurrentScreen::Chat {
-                        state.chat_menu_state.select_next();
-                    } else if state.current_screen == CurrentScreen::History {
-                        state.history_menu_state.select_next();
-                    }
+                    get_state_for_current_screen(state).select_next();
                 }
 
                 MenuMessage::SelectPrevious => {
-                    if state.current_screen == CurrentScreen::Menu {
-                        state.root_menu_state.select_previous();
-                    } else if state.current_screen == CurrentScreen::Chat {
-                        state.chat_menu_state.select_previous();
-                    } else if state.current_screen == CurrentScreen::History {
-                        state.history_menu_state.select_previous();
-                    }
+                    get_state_for_current_screen(state).select_previous();
                 }
 
                 MenuMessage::SelectItem if state.current_screen == CurrentScreen::Menu => {
