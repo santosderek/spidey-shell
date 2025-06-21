@@ -747,7 +747,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     
     let api_base = credential_manager.get("AZURE_OPENAI_ENDPOINT").unwrap_or("");
     let deployment_id = credential_manager.get("AZURE_OPENAI_DEPLOYMENT_ID").unwrap_or("");
-    let api_version = credential_manager.get("AZURE_OPENAI_API_VERSION").unwrap_or("2024-02-15-preview");
+    let api_version = "2024-02-15-preview"; // Fixed API version that works with our endpoint
     let model = credential_manager.get("AZURE_OPENAI_MODEL").unwrap_or("gpt-4.1");
     
     let oaiconfig = AzureOpenAIConfig {
@@ -761,7 +761,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Check if we have required credentials
     if api_key.is_empty() || api_base.is_empty() || deployment_id.is_empty() {
         eprintln!("Warning: Missing required Azure OpenAI credentials.");
-        eprintln!("Please set the following variables in your environment or ~/.zshenv:");
+        eprintln!("Please set the following variables in your environment:");
         eprintln!("- AZURE_OPENAI_API_KEY (or AZURE_OPENAI_KEY)");
         eprintln!("- AZURE_OPENAI_ENDPOINT");
         eprintln!("- AZURE_OPENAI_DEPLOYMENT_ID");
