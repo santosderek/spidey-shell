@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "jira_mcp"
+version = "0.1.0"
+description = "Jira MCP Server for fetching and displaying tickets"
+readme = "README.md"
+requires-python = ">=3.11"
+# license = { file = "LICENSE" }
+authors = [{ name = "Spidey Shell Team" }]
+
+dependencies = [
+    "requests>=2.28.0",
+    "jira>=3.5.0",
+    "python-dotenv>=1.0.0",
+    "pytest>=8.4.1",
+    "pytest-mock>=3.14.1",
+    "responses>=0.25.7",
+    "mcp>=1.9.4",
+    "fastapi>=0.110.0",
+    "uvicorn>=0.28.0",
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7.0.0", "pytest-mock>=3.10.0", "responses>=0.23.0"]
+
+# MCP specific configuration
+[tool.mcp]
+mcp-capabilities = ["list-tickets", "view-ticket", "show-ticket-comments"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_functions = "test_*"

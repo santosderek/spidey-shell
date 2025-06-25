@@ -1,4 +1,5 @@
 pub mod config;
+
 use rusqlite::{params, Connection, Result};
 use std::path::PathBuf;
 use crate::openai::Message;

@@ -78,8 +78,12 @@ OPENAI_API_KEY=your-key-here
 - `src/main.rs`: Main TUI logic, event loop, UI rendering, and input handling.
 - `src/openai.rs`: Async OpenAI client integration and chat completion handling.
 - `src/lib.rs`: Exposes the OpenAI module.
+- `src/persistence/`: Database and configuration management.
+- `src/app/`: Application UI and state management.
+- `src/mcp/`: MCP server integrations.
 - `Cargo.toml`: Rust project manifest and dependencies.
 - `README.md`: This file
+- `SEAORM_INTEGRATION.md`: Documentation for the SeaORM database integration
 - `icon.png`: Project icon
 
 ---
@@ -92,6 +96,8 @@ OPENAI_API_KEY=your-key-here
 - [tokio](https://tokio.rs/) (Async runtime)
 - [serde](https://serde.rs/) & [serde_json](https://docs.serde.rs/serde_json/) (Serialization)
 - [dotenv](https://github.com/dotenv-rs/dotenv) (Env loading)
+- [rusqlite](https://github.com/rusqlite/rusqlite) (SQLite database)
+- [sea-orm](https://www.sea-ql.org/SeaORM/) (Optional ORM implementation - see SEAORM_INTEGRATION.md)
 
 ---
 

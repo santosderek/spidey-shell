@@ -47,33 +47,6 @@ impl AzureOpenAIConfig {
             model,
         })
     }
-    
-    /// Create config from provided credentials
-    pub fn with_credentials(
-        api_key: &str, 
-        api_base: &str, 
-        deployment_id: &str, 
-        api_version: &str, 
-        model: &str
-    ) -> Result<Self, Box<dyn Error>> {
-        if api_key.is_empty() {
-            return Err("API key is required".into());
-        }
-        if api_base.is_empty() {
-            return Err("API base URL is required".into());
-        }
-        if deployment_id.is_empty() {
-            return Err("Deployment ID is required".into());
-        }
-        
-        Ok(Self {
-            api_key: api_key.to_string(),
-            api_base: api_base.to_string(),
-            deployment_id: deployment_id.to_string(),
-            api_version: api_version.to_string(),
-            model: model.to_string(),
-        })
-    }
 }
 
 pub struct AzureOpenAIClient {

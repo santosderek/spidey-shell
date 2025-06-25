@@ -3,6 +3,10 @@ use std::error::Error;
 use std::fmt;
 use std::time::{Duration, SystemTime};
 
+// MCP Jira ticket provider implementation
+pub mod jira;
+pub use self::jira::JiraTicketMCPServer;
+
 /// Represents a ticket from a ticketing system
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Ticket {

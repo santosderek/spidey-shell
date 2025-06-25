@@ -1,0 +1,1 @@
+// Allow empty mod.rs file since we're using lib.rs for module definition
