@@ -1,6 +1,6 @@
 use std::error::Error;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
 use crossterm::execute;
@@ -13,15 +13,13 @@ use ratatui::Terminal;
 // Import from library
 use spidey_shell::app::events;
 use spidey_shell::app::state::AppState;
-use spidey_shell::mcp::{MCPServerConfig, MCPServerManager};
+use spidey_shell::mcp::MCPServerManager;
 
 // Library imports
 use spidey_shell::credentials::CredentialManager;
 use spidey_shell::openai::{AzureOpenAIClient, AzureOpenAIConfig};
 use spidey_shell::persistence::config::AppConfig;
 use spidey_shell::persistence::ConversationStore;
-use spidey_shell::tickets::TicketMCPServer;
-use spidey_shell::tickets_core::JiraTicketMCPServer;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -121,83 +119,53 @@ fn setup_openai_client(
     Ok(AzureOpenAIClient::new(oaiconfig))
 }
 
-/// Set up the MCP server manager with ticket integration
+/// Set up the MCP server manager with automatic server discovery
 fn setup_mcp_manager(
-    credential_manager: &CredentialManager,
+    _credential_manager: &CredentialManager,
 ) -> Result<Option<MCPServerManager>, Box<dyn Error>> {
     // Set up MCP server base directory
     let mcp_base_dir = dirs::home_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join(".config/spidey-shell/mcp_servers");
 
-    match MCPServerManager::new(mcp_base_dir) {
+    match MCPServerManager::new(mcp_base_dir.clone()) {
         Ok(mut manager) => {
-            // Initialize the ticket MCP server
-            let ticket_server = TicketMCPServer::new("ticket", credential_manager);
+            println!("Initializing MCP server manager...");
 
-            // Create and initialize the ticket MCP server configuration
-            let ticket_config = MCPServerConfig {
-                name: ticket_server.name().to_string(),
-                url: None,
-                api_key: None,
-                description: Some("Ticket management system integration".to_string()),
-                capabilities: vec![
-                    "list tickets".to_string(),
-                    "view ticket details".to_string(),
-                    "show ticket comments".to_string(),
-                ],
-                enabled: true,
-            };
+            // The manager automatically discovers and loads all MCP servers during initialization
+            // via the load_all() method, which uses MCPProjectDiscovery to scan for Python projects
+            // and creates server configurations for them.
 
-            // Add the ticket server to the MCP manager
-            println!("Initializing Ticket MCP server...");
-            if let Err(e) = manager.add_server(ticket_config) {
-                eprintln!("Warning: Failed to add ticket MCP server: {}", e);
-            }
-
-            // Initialize the Jira MCP server
-            let jira_server = JiraTicketMCPServer::new("jira", credential_manager.clone());
-
-            // Create and initialize the Jira MCP server configuration
-            let jira_config = MCPServerConfig {
-                name: jira_server.name().to_string(),
-                url: None,
-                api_key: None,
-                description: Some("Jira ticket integration via MCP".to_string()),
-                capabilities: vec![
-                    "list-tickets".to_string(),
-                    "view-ticket".to_string(),
-                    "show-ticket-comments".to_string(),
-                ],
-                enabled: true,
-            };
-
-            // Add the Jira server to the MCP manager
-            println!("Initializing Jira MCP server...");
-            if let Err(e) = manager.add_server(jira_config) {
-                eprintln!("Warning: Failed to add Jira MCP server: {}", e);
-            }
-
-            // Create the Jira MCP Python project
-            println!("Setting up Jira MCP Python project...");
-            match manager.create_python_project("jira") {
-                Ok(project_path) => {
-                    println!(
-                        "Created Jira MCP Python project at {}",
-                        project_path.display()
-                    );
-
-                    // Copy our Jira MCP files to the created project
-                    let src_dir = PathBuf::from("src/mcp/servers/jira");
-                    if src_dir.exists() {
-                        println!("Installing Jira MCP server dependencies...");
-                        if let Err(e) = manager.install_python_dependencies("jira") {
-                            eprintln!("Warning: Failed to install Jira MCP dependencies: {}", e);
+            // Get the list of discovered servers
+            let server_names = manager.get_server_names();
+            if server_names.is_empty() {
+                println!("No MCP servers discovered. You can add MCP Python projects to:");
+                println!("  {}", mcp_base_dir.join("projects").display());
+            } else {
+                println!("Discovered {} MCP server(s):", server_names.len());
+                for name in &server_names {
+                    if let Some(config) = manager.get_server(name) {
+                        println!(
+                            "  - {} ({})",
+                            name,
+                            config.description.as_deref().unwrap_or("No description")
+                        );
+                        if !config.capabilities.is_empty() {
+                            println!("    Capabilities: {}", config.capabilities.join(", "));
                         }
                     }
                 }
+            }
+
+            // Start all Python MCP processes
+            match manager.start_all_python_processes() {
+                Ok(started) => {
+                    if started > 0 {
+                        println!("Started {} Python MCP process(es)", started);
+                    }
+                }
                 Err(e) => {
-                    eprintln!("Warning: Failed to create Jira MCP Python project: {}", e);
+                    eprintln!("Warning: Failed to start some Python MCP processes: {}", e);
                 }
             }
 

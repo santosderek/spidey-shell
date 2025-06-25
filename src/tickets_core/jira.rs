@@ -1,9 +1,8 @@
 use crate::credentials::CredentialManager;
 use crate::tickets_core::{Ticket, TicketError, TicketProvider};
 use serde_json::{json, Value};
-use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 
 /// Jira ticket provider implementation using MCP
 pub struct JiraTicketMCPServer {
@@ -30,17 +29,32 @@ impl JiraTicketMCPServer {
         let id = ticket_data.get("id")?.as_str()?.to_string();
         let title = ticket_data.get("title")?.as_str()?.to_string();
         let status = ticket_data.get("status")?.as_str()?.to_string();
-        
+
         // Optional fields
-        let priority = ticket_data.get("priority").and_then(|p| p.as_str()).map(|s| s.to_string());
-        let url = ticket_data.get("url").and_then(|u| u.as_str()).map(|s| s.to_string());
-        let description = ticket_data.get("description").and_then(|d| d.as_str()).map(|s| s.to_string());
-        let assigned_to = ticket_data.get("assigned_to").and_then(|a| a.as_str()).map(|s| s.to_string());
+        let priority = ticket_data
+            .get("priority")
+            .and_then(|p| p.as_str())
+            .map(|s| s.to_string());
+        let url = ticket_data
+            .get("url")
+            .and_then(|u| u.as_str())
+            .map(|s| s.to_string());
+        let description = ticket_data
+            .get("description")
+            .and_then(|d| d.as_str())
+            .map(|s| s.to_string());
+        let assigned_to = ticket_data
+            .get("assigned_to")
+            .and_then(|a| a.as_str())
+            .map(|s| s.to_string());
 
         // Parse timestamps if present
-        let created_at = self.parse_timestamp(ticket_data.get("created_at").and_then(|t| t.as_str()));
-        let updated_at = self.parse_timestamp(ticket_data.get("updated_at").and_then(|t| t.as_str()));
-        let last_comment_at = self.parse_timestamp(ticket_data.get("last_comment_at").and_then(|t| t.as_str()));
+        let created_at =
+            self.parse_timestamp(ticket_data.get("created_at").and_then(|t| t.as_str()));
+        let updated_at =
+            self.parse_timestamp(ticket_data.get("updated_at").and_then(|t| t.as_str()));
+        let last_comment_at =
+            self.parse_timestamp(ticket_data.get("last_comment_at").and_then(|t| t.as_str()));
 
         Some(Ticket {
             id,
@@ -128,17 +142,16 @@ impl TicketProvider for JiraTicketMCPServer {
     fn get_assigned_tickets(&self) -> Result<Vec<Ticket>, TicketError> {
         // This would be implemented with async/await in a real application
         // For now we'll use a blocking approach for simplicity
-        
+
         // Prepare the credentials
         self.prepare()?;
 
         match tokio::runtime::Handle::try_current() {
             Ok(handle) => {
                 // We're in an async context, use block_on
-                match handle.block_on(self.send_mcp_command(
-                    "list-tickets",
-                    json!({"filter": "assigned"}),
-                )) {
+                match handle
+                    .block_on(self.send_mcp_command("list-tickets", json!({"filter": "assigned"})))
+                {
                     Ok(response) => {
                         let tickets = response
                             .get("tickets")
@@ -161,10 +174,9 @@ impl TicketProvider for JiraTicketMCPServer {
                     TicketError::ApiError(format!("Failed to create Tokio runtime: {}", e))
                 })?;
 
-                match rt.block_on(self.send_mcp_command(
-                    "list-tickets",
-                    json!({"filter": "assigned"}),
-                )) {
+                match rt
+                    .block_on(self.send_mcp_command("list-tickets", json!({"filter": "assigned"})))
+                {
                     Ok(response) => {
                         let tickets = response
                             .get("tickets")
@@ -187,17 +199,19 @@ impl TicketProvider for JiraTicketMCPServer {
     fn get_recent_tickets(&self, days: u32) -> Result<Vec<Ticket>, TicketError> {
         // This would be implemented with async/await in a real application
         // For now we'll use a blocking approach for simplicity
-        
+
         // Prepare the credentials
         self.prepare()?;
 
         match tokio::runtime::Handle::try_current() {
             Ok(handle) => {
                 // We're in an async context, use block_on
-                match handle.block_on(self.send_mcp_command(
-                    "list-tickets",
-                    json!({"filter": "recent", "days": days}),
-                )) {
+                match handle.block_on(
+                    self.send_mcp_command(
+                        "list-tickets",
+                        json!({"filter": "recent", "days": days}),
+                    ),
+                ) {
                     Ok(response) => {
                         let tickets = response
                             .get("tickets")
@@ -220,10 +234,12 @@ impl TicketProvider for JiraTicketMCPServer {
                     TicketError::ApiError(format!("Failed to create Tokio runtime: {}", e))
                 })?;
 
-                match rt.block_on(self.send_mcp_command(
-                    "list-tickets",
-                    json!({"filter": "recent", "days": days}),
-                )) {
+                match rt.block_on(
+                    self.send_mcp_command(
+                        "list-tickets",
+                        json!({"filter": "recent", "days": days}),
+                    ),
+                ) {
                     Ok(response) => {
                         let tickets = response
                             .get("tickets")
@@ -250,10 +266,9 @@ impl TicketProvider for JiraTicketMCPServer {
         match tokio::runtime::Handle::try_current() {
             Ok(handle) => {
                 // We're in an async context, use block_on
-                match handle.block_on(self.send_mcp_command(
-                    "view-ticket",
-                    json!({"ticket_id": id}),
-                )) {
+                match handle
+                    .block_on(self.send_mcp_command("view-ticket", json!({"ticket_id": id})))
+                {
                     Ok(response) => {
                         let ticket_data = response.get("ticket").ok_or_else(|| {
                             TicketError::ApiError("No ticket data in response".to_string())
@@ -272,10 +287,7 @@ impl TicketProvider for JiraTicketMCPServer {
                     TicketError::ApiError(format!("Failed to create Tokio runtime: {}", e))
                 })?;
 
-                match rt.block_on(self.send_mcp_command(
-                    "view-ticket",
-                    json!({"ticket_id": id}),
-                )) {
+                match rt.block_on(self.send_mcp_command("view-ticket", json!({"ticket_id": id}))) {
                     Ok(response) => {
                         let ticket_data = response.get("ticket").ok_or_else(|| {
                             TicketError::ApiError("No ticket data in response".to_string())
@@ -298,19 +310,16 @@ impl TicketProvider for JiraTicketMCPServer {
         match tokio::runtime::Handle::try_current() {
             Ok(handle) => {
                 // We're in an async context, use block_on
-                match handle.block_on(self.send_mcp_command(
-                    "show-ticket-comments",
-                    json!({"ticket_id": ticket_id}),
-                )) {
+                match handle.block_on(
+                    self.send_mcp_command("show-ticket-comments", json!({"ticket_id": ticket_id})),
+                ) {
                     Ok(response) => {
                         let comments = response
                             .get("comments")
                             .and_then(|c| c.as_array())
                             .map(|arr| {
                                 arr.iter()
-                                    .filter_map(|comment| {
-                                        comment.as_str().map(|s| s.to_string())
-                                    })
+                                    .filter_map(|comment| comment.as_str().map(|s| s.to_string()))
                                     .collect()
                             })
                             .unwrap_or_default();
@@ -326,19 +335,16 @@ impl TicketProvider for JiraTicketMCPServer {
                     TicketError::ApiError(format!("Failed to create Tokio runtime: {}", e))
                 })?;
 
-                match rt.block_on(self.send_mcp_command(
-                    "show-ticket-comments",
-                    json!({"ticket_id": ticket_id}),
-                )) {
+                match rt.block_on(
+                    self.send_mcp_command("show-ticket-comments", json!({"ticket_id": ticket_id})),
+                ) {
                     Ok(response) => {
                         let comments = response
                             .get("comments")
                             .and_then(|c| c.as_array())
                             .map(|arr| {
                                 arr.iter()
-                                    .filter_map(|comment| {
-                                        comment.as_str().map(|s| s.to_string())
-                                    })
+                                    .filter_map(|comment| comment.as_str().map(|s| s.to_string()))
                                     .collect()
                             })
                             .unwrap_or_default();

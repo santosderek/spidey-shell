@@ -86,11 +86,11 @@ impl MCPPythonProcess {
             match proc.try_wait() {
                 Ok(Some(_)) => {
                     // Process has exited, we can restart it
-                },
+                }
                 Ok(None) => {
                     // Process is still running
                     return Ok(());
-                },
+                }
                 Err(e) => {
                     return Err(io::Error::new(
                         io::ErrorKind::Other,
@@ -109,16 +109,16 @@ impl MCPPythonProcess {
         // Prepare command
         let mut cmd = Command::new("uv");
         cmd.arg("pip")
-           .arg("run")
-           .arg("--")
-           .arg("python")
-           .arg("-m")
-           .arg(&self.config.package_name)
-           .current_dir(&self.config.project_path)
-           .args(&self.config.args)
-           .stdin(Stdio::piped())
-           .stdout(Stdio::piped())
-           .stderr(Stdio::piped());
+            .arg("run")
+            .arg("--")
+            .arg("python")
+            .arg("-m")
+            .arg(&self.config.package_name)
+            .current_dir(&self.config.project_path)
+            .args(&self.config.args)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
 
         // Add environment variables
         for (key, value) in &self.config.env {
@@ -131,27 +131,28 @@ impl MCPPythonProcess {
             Ok(child) => {
                 self.process = Some(child);
                 self.start_time = Some(Instant::now());
-                
+
                 // Create a clone of the status Arc for the monitoring thread
                 let status_clone = Arc::clone(&self.status);
                 let name = self.config.name.clone();
                 let timeout = self.config.startup_timeout;
-                
+
                 // Spawn a thread to monitor the output and set status to Running when ready
                 if let Some(mut child) = self.process.take() {
-                    if let (Some(stdout), Some(stderr)) = (child.stdout.take(), child.stderr.take()) {
+                    if let (Some(stdout), Some(stderr)) = (child.stdout.take(), child.stderr.take())
+                    {
                         // Create a struct to hold the child process in the spawned thread
                         struct ChildProcess {
                             child: Child,
                         }
-                        
+
                         let child_process = ChildProcess { child };
-                        
+
                         std::thread::spawn(move || {
                             let mut child_proc = child_process;
                             let start_time = Instant::now();
                             let reader = BufReader::new(stdout);
-                            
+
                             // Create another thread to monitor stderr
                             let stderr_name = name.clone();
                             let stderr_thread = std::thread::spawn(move || {
@@ -162,20 +163,25 @@ impl MCPPythonProcess {
                                             warn!("[{} stderr] {}", stderr_name, line);
                                         }
                                         Err(e) => {
-                                            error!("Error reading stderr for {}: {}", stderr_name, e);
+                                            error!(
+                                                "Error reading stderr for {}: {}",
+                                                stderr_name, e
+                                            );
                                             break;
                                         }
                                     }
                                 }
                             });
-                            
+
                             // Look for indication that the server is running
                             for line in reader.lines() {
                                 match line {
                                     Ok(line) => {
                                         debug!("[{}] {}", name, line);
                                         // TODO: Update this condition based on your server's output
-                                        if line.contains("Server started") || line.contains("Running on") {
+                                        if line.contains("Server started")
+                                            || line.contains("Running on")
+                                        {
                                             let mut status = status_clone.lock().unwrap();
                                             *status = MCPProcessStatus::Running;
                                             info!("Python MCP process {} is now running", name);
@@ -189,7 +195,7 @@ impl MCPPythonProcess {
                                         break;
                                     }
                                 }
-                                
+
                                 // Check if we've timed out
                                 if start_time.elapsed().as_secs() > timeout {
                                     error!("Timeout waiting for {} to start", name);
@@ -198,14 +204,15 @@ impl MCPPythonProcess {
                                     break;
                                 }
                             }
-                            
+
                             // Now just keep monitoring the process
                             match child_proc.child.wait() {
                                 Ok(status) => {
                                     if !status.success() {
                                         error!(
                                             "Python MCP process {} exited with code: {:?}",
-                                            name, status.code()
+                                            name,
+                                            status.code()
                                         );
                                         let mut status_guard = status_clone.lock().unwrap();
                                         *status_guard = MCPProcessStatus::Failed;
@@ -221,30 +228,30 @@ impl MCPPythonProcess {
                                     *status_guard = MCPProcessStatus::Failed;
                                 }
                             }
-                            
+
                             // Wait for stderr thread to finish
                             let _ = stderr_thread.join();
                         });
-                        
+
                         // Create a new process instance to replace the one we took
                         let mut cmd = Command::new("uv");
                         cmd.arg("pip")
-                           .arg("run")
-                           .arg("--")
-                           .arg("python")
-                           .arg("-m")
-                           .arg(&self.config.package_name)
-                           .current_dir(&self.config.project_path)
-                           .args(&self.config.args)
-                           .stdin(Stdio::piped())
-                           .stdout(Stdio::piped())
-                           .stderr(Stdio::piped());
-                        
+                            .arg("run")
+                            .arg("--")
+                            .arg("python")
+                            .arg("-m")
+                            .arg(&self.config.package_name)
+                            .current_dir(&self.config.project_path)
+                            .args(&self.config.args)
+                            .stdin(Stdio::piped())
+                            .stdout(Stdio::piped())
+                            .stderr(Stdio::piped());
+
                         // Add environment variables
                         for (key, value) in &self.config.env {
                             cmd.env(key, value);
                         }
-                        
+
                         match cmd.spawn() {
                             Ok(new_child) => {
                                 self.process = Some(new_child);
@@ -267,7 +274,10 @@ impl MCPPythonProcess {
                 Ok(())
             }
             Err(e) => {
-                error!("Failed to start Python MCP process {}: {}", self.config.name, e);
+                error!(
+                    "Failed to start Python MCP process {}: {}",
+                    self.config.name, e
+                );
                 let mut status = self.status.lock().unwrap();
                 *status = MCPProcessStatus::Failed;
                 Err(e)
@@ -279,12 +289,12 @@ impl MCPPythonProcess {
     pub fn stop(&mut self) -> io::Result<()> {
         if let Some(mut proc) = self.process.take() {
             info!("Stopping Python MCP process: {}", self.config.name);
-            
+
             {
                 let mut status = self.status.lock().unwrap();
                 *status = MCPProcessStatus::ShuttingDown;
             }
-            
+
             // Try graceful shutdown by sending SIGTERM
             #[cfg(unix)]
             {
@@ -294,29 +304,32 @@ impl MCPPythonProcess {
                 }
                 std::thread::sleep(std::time::Duration::from_millis(100));
             }
-            
+
             #[cfg(windows)]
             {
                 proc.kill()?;
             }
-            
+
             // Give it a moment to shut down
             match proc.wait_timeout(Duration::from_secs(5))? {
                 Some(_) => {
                     info!("Python MCP process {} stopped", self.config.name);
                 }
                 None => {
-                    warn!("Python MCP process {} did not stop gracefully, forcing", self.config.name);
+                    warn!(
+                        "Python MCP process {} did not stop gracefully, forcing",
+                        self.config.name
+                    );
                     proc.kill()?;
                     proc.wait()?;
                 }
             }
-            
+
             {
                 let mut status = self.status.lock().unwrap();
                 *status = MCPProcessStatus::NotRunning;
             }
-            
+
             self.start_time = None;
             Ok(())
         } else {
@@ -358,12 +371,12 @@ impl MCPPythonProcess {
     pub fn is_running(&self) -> bool {
         self.status() == MCPProcessStatus::Running
     }
-    
+
     /// Check if the process has failed
     pub fn has_failed(&self) -> bool {
         self.status() == MCPProcessStatus::Failed
     }
-    
+
     /// Restart the process if it has failed or is not running
     pub fn ensure_running(&mut self) -> io::Result<bool> {
         match self.status() {
@@ -412,7 +425,10 @@ impl MCPPythonProcess {
 impl Drop for MCPPythonProcess {
     fn drop(&mut self) {
         if let Err(e) = self.stop() {
-            error!("Error stopping Python MCP process {}: {}", self.config.name, e);
+            error!(
+                "Error stopping Python MCP process {}: {}",
+                self.config.name, e
+            );
         }
     }
 }

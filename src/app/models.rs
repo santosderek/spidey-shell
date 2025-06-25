@@ -1,17 +1,11 @@
-use std::collections::HashMap;
-use std::path::PathBuf;
-
-use ratatui::widgets::ListState;
-
 use crate::openai::Message;
-use crate::persistence::Conversation;
 
 /// Input mode for the application (vim-style)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InputMode {
-    Normal, // For navigation and commands
-    Insert, // For text input
-    Visual, // For selecting text/messages
+    Normal,  // For navigation and commands
+    Insert,  // For text input
+    Visual,  // For selecting text/messages
     Command, // For command input (like :q in vim)
 }
 
@@ -25,9 +19,9 @@ pub enum SearchMode {
 /// Special mode for the conversation list
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ConversationMode {
-    None,   // Regular conversation
-    New,    // Create new conversation
-    All     // View all conversations
+    None, // Regular conversation
+    New,  // Create new conversation
+    All,  // View all conversations
 }
 
 /// Represents a message along with its conversation title
@@ -53,6 +47,10 @@ pub struct ServerStatus {
 
 impl ServerStatus {
     pub fn new(name: String, is_enabled: bool, is_active: bool) -> Self {
-        Self { name, is_enabled, is_active }
+        Self {
+            name,
+            is_enabled,
+            is_active,
+        }
     }
 }

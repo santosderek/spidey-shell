@@ -29,21 +29,21 @@ impl Ticket {
             .map(|time| format_time(time))
             .unwrap_or_else(|| "Unknown".to_string())
     }
-    
+
     /// Format last updated date as a human-readable string
     pub fn formatted_updated_date(&self) -> String {
         self.updated_at
             .map(|time| format_time(time))
             .unwrap_or_else(|| "Unknown".to_string())
     }
-    
+
     /// Format last comment date as a human-readable string
     pub fn formatted_last_comment_date(&self) -> String {
         self.last_comment_at
             .map(|time| format_time(time))
             .unwrap_or_else(|| "N/A".to_string())
     }
-    
+
     /// Generate a markdown table row for this ticket
     pub fn to_markdown_row(&self) -> String {
         format!(
@@ -107,30 +107,30 @@ impl Error for TicketError {}
 pub trait TicketProvider {
     /// Get all tickets assigned to the current user
     fn get_assigned_tickets(&self) -> Result<Vec<Ticket>, TicketError>;
-    
+
     /// Get recent tickets (created or updated within a time period)
     fn get_recent_tickets(&self, days: u32) -> Result<Vec<Ticket>, TicketError>;
-    
+
     /// Get a specific ticket by ID
     fn get_ticket_by_id(&self, id: &str) -> Result<Ticket, TicketError>;
-    
+
     /// Get comments for a specific ticket
     fn get_ticket_comments(&self, ticket_id: &str) -> Result<Vec<String>, TicketError>;
-    
+
     /// Generate a markdown table of tickets
     fn generate_ticket_markdown_table(&self, tickets: &[Ticket]) -> String {
         let header = "| ID | Title | Status | Priority | Last Updated | Last Comment |\n";
         let divider = "|---|-------|--------|----------|-------------|-------------|\n";
-        
+
         let mut table = String::new();
         table.push_str(header);
         table.push_str(divider);
-        
+
         for ticket in tickets {
             table.push_str(&ticket.to_markdown_row());
             table.push('\n');
         }
-        
+
         table
     }
 }

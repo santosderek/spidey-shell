@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::{self, Read, Write};
 use std::path::PathBuf;
@@ -43,4 +43,3 @@ impl AppConfig {
         Ok(())
     }
 }
-

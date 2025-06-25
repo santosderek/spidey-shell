@@ -1,5 +1,4 @@
 use std::error::Error;
-use std::io;
 use std::time::Duration;
 
 use crossterm::event::{self, Event, KeyCode};
@@ -178,4 +177,3 @@ where
         }
     }
 }
-

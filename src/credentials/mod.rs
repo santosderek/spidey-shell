@@ -30,4 +30,3 @@ impl CredentialManager {
         self.credentials.get(name).map(|s| s.as_str())
     }
 }
-

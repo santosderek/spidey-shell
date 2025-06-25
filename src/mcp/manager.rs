@@ -83,14 +83,14 @@ impl MCPServerManager {
         fs::create_dir_all(&projects_dir)?;
 
         let project_discovery = MCPProjectDiscovery::new(projects_dir);
-        
+
         let mut manager = Self {
             servers: HashMap::new(),
             base_dir,
             python_processes: HashMap::new(),
             project_discovery: Some(project_discovery),
         };
-        
+
         manager.load_all()?;
         Ok(manager)
     }
@@ -105,7 +105,8 @@ impl MCPServerManager {
             for entry in entries.flatten() {
                 if entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
                     let name = entry.file_name().to_string_lossy().into_owned();
-                    if name != "projects" {  // Skip the projects directory
+                    if name != "projects" {
+                        // Skip the projects directory
                         if let Ok(config) = MCPServerConfig::load(&name, &self.base_dir) {
                             self.servers.insert(name, config);
                         }
@@ -113,17 +114,17 @@ impl MCPServerManager {
                 }
             }
         }
-        
+
         // Discover Python projects if project discovery is available
         if let Some(discovery) = &mut self.project_discovery {
             match discovery.scan_projects() {
                 Ok(projects) => {
                     info!("Found {} Python MCP projects", projects.len());
-                    
+
                     // Convert projects to server configs
                     for project in projects.iter().filter(|p| p.is_valid) {
                         let name = &project.name;
-                        
+
                         // Create or update server config
                         if let Some(existing) = self.servers.get_mut(name) {
                             // Update existing config
@@ -140,19 +141,21 @@ impl MCPServerManager {
                             config.capabilities = project.metadata.mcp_capabilities.clone();
                             self.servers.insert(name.clone(), config);
                         }
-                        
+
                         // Create Python config for the project
-                        let (name, project_path, package_name, description) = discovery.create_python_config_data(project);
-                        
-                        let mut python_config = MCPPythonConfig::new(&name, project_path, &package_name);
-                        
+                        let (name, project_path, package_name, description) =
+                            discovery.create_python_config_data(project);
+
+                        let mut python_config =
+                            MCPPythonConfig::new(&name, project_path, &package_name);
+
                         // Set environment variables if description is available
                         if let Some(desc) = description {
                             let mut env = std::collections::HashMap::new();
                             env.insert("MCP_DESCRIPTION".to_string(), desc);
                             python_config.env = env;
                         }
-                        
+
                         // Create Python process
                         let process = MCPPythonProcess::new(python_config);
                         self.python_processes.insert(name.clone(), process);
@@ -195,20 +198,20 @@ impl MCPServerManager {
         }
         Ok(())
     }
-    
+
     /// Parse input for @server commands
-    /// 
+    ///
     /// Returns a tuple containing:
     /// - The modified input with @server commands removed
     /// - A vector of server names mentioned in the input
     pub fn parse_server_commands(&self, input: &str) -> (String, Vec<String>) {
         let mut result = String::new();
         let mut servers = Vec::new();
-        
+
         // Simple parser for @server mentions
         let mut in_mention = false;
         let mut current_mention = String::new();
-        
+
         for c in input.chars() {
             if in_mention {
                 if c.is_alphanumeric() || c == '_' || c == '-' {
@@ -216,7 +219,7 @@ impl MCPServerManager {
                 } else {
                     // End of mention
                     in_mention = false;
-                    
+
                     if !current_mention.is_empty() {
                         // Check if it's a valid server
                         if self.servers.contains_key(&current_mention) {
@@ -228,7 +231,7 @@ impl MCPServerManager {
                         }
                         current_mention.clear();
                     }
-                    
+
                     // Add the current character
                     result.push(c);
                 }
@@ -238,7 +241,7 @@ impl MCPServerManager {
                 result.push(c);
             }
         }
-        
+
         // Check if we're still processing a mention at the end
         if in_mention && !current_mention.is_empty() {
             if self.servers.contains_key(&current_mention) {
@@ -249,10 +252,10 @@ impl MCPServerManager {
                 result.push_str(&current_mention);
             }
         }
-        
+
         (result.trim().to_string(), servers)
     }
-    
+
     /// Start a Python MCP subprocess
     pub fn start_python_process(&mut self, name: &str) -> io::Result<bool> {
         if let Some(process) = self.python_processes.get_mut(name) {
@@ -263,7 +266,7 @@ impl MCPServerManager {
             Ok(false)
         }
     }
-    
+
     /// Stop a Python MCP subprocess
     pub fn stop_python_process(&mut self, name: &str) -> io::Result<bool> {
         if let Some(process) = self.python_processes.get_mut(name) {
@@ -274,12 +277,12 @@ impl MCPServerManager {
             Ok(false)
         }
     }
-    
+
     /// Get status of a Python MCP subprocess
     pub fn get_python_process_status(&self, name: &str) -> Option<MCPProcessStatus> {
         self.python_processes.get(name).map(|p| p.status())
     }
-    
+
     /// Send a request to a Python MCP subprocess
     pub fn send_to_python_process(&mut self, name: &str, data: &str) -> io::Result<bool> {
         if let Some(process) = self.python_processes.get_mut(name) {
@@ -293,13 +296,13 @@ impl MCPServerManager {
                     info!("Starting Python MCP process: {}", name);
                     process.start()?;
                 }
-                
+
                 // Wait a bit for the process to start
                 let start_time = std::time::Instant::now();
                 while !process.is_running() && start_time.elapsed().as_secs() < 5 {
                     std::thread::sleep(std::time::Duration::from_millis(100));
                 }
-                
+
                 if !process.is_running() {
                     return Err(io::Error::new(
                         io::ErrorKind::NotConnected,
@@ -307,7 +310,7 @@ impl MCPServerManager {
                     ));
                 }
             }
-            
+
             // Send the data
             process.send(data)?;
             Ok(true)
@@ -316,15 +319,15 @@ impl MCPServerManager {
             Ok(false)
         }
     }
-    
+
     /// Create a new Python MCP project
     pub fn create_python_project(&mut self, name: &str) -> io::Result<PathBuf> {
         if let Some(discovery) = &self.project_discovery {
             let project_dir = discovery.create_project(name)?;
-            
+
             // Reload to discover the new project
             self.load_all()?;
-            
+
             Ok(project_dir)
         } else {
             Err(io::Error::new(
@@ -333,7 +336,7 @@ impl MCPServerManager {
             ))
         }
     }
-    
+
     /// Start all Python MCP processes
     pub fn start_all_python_processes(&mut self) -> io::Result<usize> {
         let mut started = 0;
@@ -350,7 +353,7 @@ impl MCPServerManager {
         }
         Ok(started)
     }
-    
+
     /// Stop all Python MCP processes
     pub fn stop_all_python_processes(&mut self) -> io::Result<usize> {
         let mut stopped = 0;
@@ -367,7 +370,7 @@ impl MCPServerManager {
         }
         Ok(stopped)
     }
-    
+
     /// Install dependencies for a Python MCP project
     pub fn install_python_dependencies(&mut self, name: &str) -> io::Result<bool> {
         if let Some(discovery) = &self.project_discovery {
