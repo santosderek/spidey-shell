@@ -1,8 +1,10 @@
+pub mod config;
 pub mod credentials;
 pub mod openai;
 pub mod persistence;
 pub mod tickets;
 pub mod tickets_core;
+pub mod run;
 
 // MCP related modules
 pub mod mcp {

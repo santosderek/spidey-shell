@@ -1,20 +1,12 @@
-"""
-Jira client module for interacting with the Jira API.
-
-This module provides a JiraTicketManager class for fetching and processing Jira tickets.
-"""
-
-import os
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
+from urllib.parse import urljoin
 
-try:
-    from jira import JIRA
-    from jira.exceptions import JIRAError
-except ImportError:
-    # This will be handled when the manager is instantiated
-    pass
+from jira import JIRA
+from jira.exceptions import JIRAError
+
+from jira_mcp.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -22,50 +14,51 @@ logger = logging.getLogger(__name__)
 class JiraTicketManager:
     """Manages interactions with Jira API to fetch and process tickets."""
 
-    # Cisco Jira defaults
-    jira_cloud_scheme = "https"
-    jira_cloud_domain = "cisco-jira.atlassian.net"
-    jira_cloud_api_path = "/rest/api/3/"
-
-    def __init__(self):
-        """Initialize the Jira ticket manager with credentials from environment."""
-        # Use environment variables or defaults
-        self.jira_url = (
-            os.getenv("JIRA_URL")
-            or f"{self.jira_cloud_scheme}://{self.jira_cloud_domain}"
-        )
-        self.jira_username = os.getenv("JIRA_API_USER")
-        self.jira_api_token = os.getenv("JIRA_API_TOKEN")
+    def __init__(
+        self, 
+        auth: Optional[Tuple[str, str]] = None, 
+        timeout: int = 10, 
+        max_retries: int = 3
+    ):
+        """
+        Initialize the Jira ticket manager with credentials.
+        
+        Args:
+            auth: Tuple of (username, api_token) for authentication.
+                 If not provided, will use credentials from settings.
+            timeout: Connection timeout in seconds
+            max_retries: Maximum number of connection retries
+        """
+        self.jira_url = settings.jira_url
         self.jira_client = None
-        self.logger = logging.getLogger(__name__)
-
-        # If JIRA_URL is not set, construct it from defaults
-        if not self.jira_url and self.jira_cloud_domain:
-            self.jira_url = f"{self.jira_cloud_scheme}://{self.jira_cloud_domain}"
-            self.logger.info(f"Using default Jira URL: {self.jira_url}")
-
-        if not all([self.jira_url, self.jira_username, self.jira_api_token]):
-            missing = []
-            if not self.jira_url:
-                missing.append("JIRA_URL")
-            if not self.jira_username:
-                missing.append("JIRA_USERNAME/JIRA_API_USER")
-            if not self.jira_api_token:
-                missing.append("JIRA_API_TOKEN")
-            self.logger.warning(f"Missing Jira credentials: {', '.join(missing)}")
-        else:
+        
+        # Use provided auth or get from settings
+        credentials = auth or settings.credentials_tuple
+        
+        if credentials:
             try:
+                # Configure client options with timeouts and retries
+                client_options = {
+                    'timeout': timeout,
+                    'max_retries': max_retries,
+                    'pool_connections': 10,
+                    'pool_maxsize': 10,
+                }
+                
                 self.jira_client = JIRA(
                     server=self.jira_url,
-                    basic_auth=(self.jira_username, self.jira_api_token),
+                    basic_auth=credentials,
+                    options=client_options,
                 )
-                self.logger.info("Successfully connected to Jira")
+                logger.info(f"Connected to Jira at {self.jira_url}")
             except Exception as e:
-                self.logger.error(f"Failed to connect to Jira: {e}")
+                logger.error(f"Failed to connect to Jira: {e}")
+        else:
+            logger.warning("No credentials provided. Some operations will be unavailable.")
 
     def get_assigned_tickets(self) -> List[Dict[str, Any]]:
         """Get all tickets assigned to the current user."""
-        if not self.jira_client:
+        if not self.jira_client:  # FIXME: Make this an error type
             return []
 
         try:
@@ -73,7 +66,7 @@ class JiraTicketManager:
             issues = self.jira_client.search_issues(jql_query)
             return [self._convert_to_ticket(issue) for issue in issues]
         except JIRAError as e:
-            self.logger.error(f"Error fetching assigned tickets: {e}")
+            logger.error(f"Error fetching assigned tickets: {e}")
             return []
 
     def get_recent_tickets(self, days: int) -> List[Dict[str, Any]]:
@@ -87,7 +80,7 @@ class JiraTicketManager:
             issues = self.jira_client.search_issues(jql_query)
             return [self._convert_to_ticket(issue) for issue in issues]
         except JIRAError as e:
-            self.logger.error(f"Error fetching recent tickets: {e}")
+            logger.error(f"Error fetching recent tickets: {e}")
             return []
 
     def get_ticket_by_id(self, ticket_id: str) -> Optional[Dict[str, Any]]:
@@ -99,7 +92,7 @@ class JiraTicketManager:
             issue = self.jira_client.issue(ticket_id)
             return self._convert_to_ticket(issue)
         except JIRAError as e:
-            self.logger.error(f"Error fetching ticket {ticket_id}: {e}")
+            logger.error(f"Error fetching ticket {ticket_id}: {e}")
             return None
 
     def get_ticket_comments(self, ticket_id: str) -> List[str]:
@@ -120,11 +113,11 @@ class JiraTicketManager:
                 comments.append(f"**{author}** on {created}:\n\n{comment.body}\n")
 
             return comments
-        except JIRAError as e:
-            self.logger.error(f"Error fetching comments for ticket {ticket_id}: {e}")
+        except JIRAError:
+            logger.exception(f"Error fetching comments for ticket {ticket_id}")
             return []
-        except Exception as e:
-            self.logger.error(f"Unexpected error processing comments: {e}")
+        except Exception:
+            logger.exception("Unexpected error processing comments.")
             return []
 
     def _convert_to_ticket(self, issue) -> Dict[str, Any]:
@@ -135,7 +128,7 @@ class JiraTicketManager:
                 "id": issue.key,
                 "title": issue.fields.summary,
                 "status": issue.fields.status.name,
-                "url": f"{self.jira_url}/browse/{issue.key}",
+                "url": f"{self.jira_client.server_url}/browse/{issue.key}",
             }
 
             # Extract optional fields
@@ -163,11 +156,10 @@ class JiraTicketManager:
                 ticket["last_comment_at"] = latest_comment.updated
 
             return ticket
-        except Exception as e:
-            self.logger.error(f"Error converting issue {issue.key}: {e}")
+        except Exception:
             return {
                 "id": issue.key,
                 "title": "Error processing ticket",
                 "status": "Unknown",
-                "url": f"{self.jira_url}/browse/{issue.key}",
+                "url": urljoin(self.jira_client.server_url, f"/browse/{issue.key}"),
             }

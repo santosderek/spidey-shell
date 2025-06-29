@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::{self, Read, Write};
 use std::path::PathBuf;
+use tracing::{info, warn, error};
 
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub struct AppConfig {
@@ -24,22 +25,69 @@ impl AppConfig {
     pub fn load() -> io::Result<Self> {
         let path = Self::config_file();
         if path.exists() {
-            let mut file = fs::File::open(&path)?;
+            info!("Loading configuration from {}", path.display());
+            let mut file = match fs::File::open(&path) {
+                Ok(file) => file,
+                Err(e) => {
+                    error!("Failed to open config file: {}", e);
+                    return Err(e);
+                }
+            };
+            
             let mut content = String::new();
-            file.read_to_string(&mut content)?;
-            Ok(serde_json::from_str(&content).unwrap_or_default())
+            if let Err(e) = file.read_to_string(&mut content) {
+                error!("Failed to read config file: {}", e);
+                return Err(e);
+            }
+            
+            match serde_json::from_str(&content) {
+                Ok(config) => {
+                    info!("Configuration loaded successfully");
+                    Ok(config)
+                },
+                Err(e) => {
+                    warn!("Failed to parse config file, using default configuration: {}", e);
+                    Ok(AppConfig::default())
+                }
+            }
         } else {
+            info!("Config file not found at {}, using default configuration", path.display());
             Ok(AppConfig::default())
         }
     }
 
     pub fn save(&self) -> io::Result<()> {
         let dir = Self::config_dir();
-        fs::create_dir_all(&dir)?;
+        info!("Ensuring config directory exists at {}", dir.display());
+        if let Err(e) = fs::create_dir_all(&dir) {
+            error!("Failed to create config directory: {}", e);
+            return Err(e);
+        }
+        
         let path = Self::config_file();
-        let mut file = fs::File::create(path)?;
-        let content = serde_json::to_string_pretty(self).unwrap();
-        file.write_all(content.as_bytes())?;
+        info!("Saving configuration to {}", path.display());
+        let mut file = match fs::File::create(&path) {
+            Ok(file) => file,
+            Err(e) => {
+                error!("Failed to create config file: {}", e);
+                return Err(e);
+            }
+        };
+        
+        let content = match serde_json::to_string_pretty(self) {
+            Ok(content) => content,
+            Err(e) => {
+                error!("Failed to serialize config: {}", e);
+                return Err(io::Error::new(io::ErrorKind::Other, e));
+            }
+        };
+        
+        if let Err(e) = file.write_all(content.as_bytes()) {
+            error!("Failed to write config file: {}", e);
+            return Err(e);
+        }
+        
+        info!("Configuration saved successfully");
         Ok(())
     }
 }
