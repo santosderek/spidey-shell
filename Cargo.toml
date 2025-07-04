@@ -3,17 +3,35 @@ name = "spidey-shell"
 version = "0.1.0"
 edition = "2021"
 
-include = ["assets/theme.toml"]
+[[bin]]
+name = "spidey-shell"
+path = "src/main.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-copypasta = "0.10.0"
-cpal = "0.15.2"
-cursive = { version = "0.20.0", features = ["toml"] }
+async-openai = { version = "0.28.3", features = ["byot"] }
+crossterm = "0.27"
 dirs = "5.0.1"
 dotenv = "0.15.0"
-lazy_static = "1.4.0"
-openai-api-rs = "2.1.2"
-tokio = {version="1.35.1", features=["full"]}
+ratatui = "0.30.0-alpha.4"
+reqwest = { version = "0.12", features = ["json"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.35.1", features = ["full"] }
+rusqlite = { version = "0.31", features = ["bundled"] }
+chrono = { version = "0.4", features = ["serde"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+libc = "0.2"
+
+# The following dependencies are not included to avoid conflicts
+# but are part of the SeaORM implementation documented in SEAORM_INTEGRATION.md
+# sea-orm = { version = "0.12", features = ["sqlx-sqlite", "runtime-tokio", "macros"] }
+# sea-query = "0.30"
+# async-std = { version = "1", features = ["attributes", "tokio1"] }
+# futures = "0.3"
+
+[dev-dependencies]
+tempfile = "3.8"
 
